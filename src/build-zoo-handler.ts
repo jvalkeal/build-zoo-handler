@@ -1,6 +1,6 @@
 import * as core from '@actions/core';
-import { checkCommands } from './ensure-commands';
-import { splitStringToArray } from './utils';
+import {checkCommands} from './ensure-commands';
+import {splitStringToArray} from './utils';
 
 async function run() {
   try {
