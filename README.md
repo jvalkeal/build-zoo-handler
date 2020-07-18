@@ -19,7 +19,7 @@ steps:
   with:
     ensure-commands: |
       gradle
-      maven
+      mvn
 ```
 
 # License
