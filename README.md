@@ -22,6 +22,16 @@ steps:
       mvn
 ```
 
+## Ensure Environment Variables
+```yaml
+steps:
+- uses: jvalkeal/build-zoo-handler@main
+  with:
+    ensure-env: |
+      M2_HOME
+      GRADLE_HOME
+```
+
 # License
 
 The scripts and documentation in this project are released under the [MIT License](LICENSE)
