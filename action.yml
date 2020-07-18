@@ -1,0 +1,12 @@
+name: 'Build Zoo Handler'
+description: 'Combination of a various concepts, checks and ideas for helping
+   with build and release process'
+author: 'jvalkeal'
+inputs:
+  ensure-commands:
+    description: 'Checking a list commands which needs to exists on a path
+       and failing otherwise'
+    required: false
+runs:
+  using: 'node12'
+  main: 'dist/index.js'
