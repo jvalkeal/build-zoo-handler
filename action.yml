@@ -7,6 +7,10 @@ inputs:
     description: 'Checking a list commands which needs to exists on a path
        and failing otherwise'
     required: false
+  ensure-env:
+    description: 'Checking a list env variables which needs to exist
+       and failing otherwise'
+    required: false
 runs:
   using: 'node12'
   main: 'dist/index.js'
