@@ -1692,8 +1692,8 @@ function tagRelease(username, useremail, branch, tag) {
         yield runCli(['config', '--global', 'user.name', username]);
         yield runCli(['config', '--global', 'user.email', useremail]);
         yield runCli(['checkout', '-b', branch]);
-        yield runCli(['commit', '-a', '-m', `Release ${branch}`]);
-        yield runCli(['push', 'origin', `Release ${branch}`]);
+        yield runCli(['commit', '-a', '-m', `"Release ${branch}"`]);
+        yield runCli(['push', 'origin', `${branch}`]);
         yield runCli(['tag', `v${tag}`]);
         yield runCli(['push', '--tags', 'origin']);
     });
