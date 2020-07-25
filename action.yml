@@ -5,11 +5,27 @@ author: 'jvalkeal'
 inputs:
   ensure-commands:
     description: 'Checking a list commands which needs to exists on a path
-       and failing otherwise'
+      and failing otherwise'
     required: false
   ensure-env:
     description: 'Checking a list env variables which needs to exist
-       and failing otherwise'
+      and failing otherwise'
+    required: false
+  tag-release-username:
+    description: 'Sets git user.name which will be used for git commands,
+      required for tag-release feature'
+    required: false
+  tag-release-useremail:
+    description: 'Sets git user.email which will be used for git commands,
+      required for tag-release feature'
+    required: false
+  tag-release-branch:
+    description: 'Branch name used to push a build sources, required for
+      tag-release feature'
+    required: false
+  tag-release-tag:
+    description: 'Tag name used to tag a build sources, required for
+      tag-release feature'
     required: false
 runs:
   using: 'node12'
