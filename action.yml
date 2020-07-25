@@ -27,6 +27,9 @@ inputs:
     description: 'Tag name used to tag a build sources, required for
       tag-release feature'
     required: false
+  tag-release-tag-prefix:
+    description: 'Prefix for tag-release-tag, defaults to "v"'
+    required: false
 runs:
   using: 'node12'
   main: 'dist/index.js'

@@ -1649,9 +1649,10 @@ function run() {
             const username = core.getInput('tag-release-username', { required: false });
             const useremail = core.getInput('tag-release-useremail', { required: false });
             const branch = core.getInput('tag-release-branch', { required: false });
-            const tag = core.getInput('tag-release-tag', { required: false });
+            const tag = core.getInput('tag-release-tag', { required: false }) || branch;
+            const tagPrefix = core.getInput('tag-release-tag-prefix', { required: false }) || 'v';
             if (username && useremail && branch && tag) {
-                yield tag_release_1.tagRelease(username, useremail, branch, tag);
+                yield tag_release_1.tagRelease(username, useremail, branch, tag, tagPrefix);
             }
         }
         catch (error) {
@@ -1687,14 +1688,14 @@ var __importStar = (this && this.__importStar) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const core = __importStar(__webpack_require__(470));
 const exec_1 = __webpack_require__(986);
-function tagRelease(username, useremail, branch, tag) {
+function tagRelease(username, useremail, branch, tag, tagPrefix) {
     return __awaiter(this, void 0, void 0, function* () {
         yield runCli(['config', '--global', 'user.name', username]);
         yield runCli(['config', '--global', 'user.email', useremail]);
         yield runCli(['checkout', '-b', branch]);
         yield runCli(['commit', '-a', '-m', `"Release ${branch}"`]);
         yield runCli(['push', 'origin', `${branch}`]);
-        yield runCli(['tag', `v${tag}`]);
+        yield runCli(['tag', `${tagPrefix}${tag}`]);
         yield runCli(['push', '--tags', 'origin']);
     });
 }
