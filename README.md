@@ -32,6 +32,18 @@ steps:
       GRADLE_HOME
 ```
 
+## Tag Release
+```yaml
+steps:
+- uses: jvalkeal/build-zoo-handler@main
+  with:
+    tag-release-username: 'Whoami'
+    tag-release-useremail: 'whoami@example.org'
+    tag-release-branch: 0.0.0
+    tag-release-tag: 0.0.0
+    tag-release-tag-prefix: v
+```
+
 # License
 
 The scripts and documentation in this project are released under the [MIT License](LICENSE)
