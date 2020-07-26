@@ -44,6 +44,14 @@ steps:
     tag-release-tag-prefix: v
 ```
 
+## Pack Feature
+```yaml
+steps:
+- uses: jvalkeal/build-zoo-handler@main
+  with:
+    pack-version: 0.12.0
+```
+
 # License
 
 The scripts and documentation in this project are released under the [MIT License](LICENSE)
