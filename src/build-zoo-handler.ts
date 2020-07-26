@@ -1,8 +1,9 @@
 import * as core from '@actions/core';
 import {checkCommands} from './ensure-commands';
 import {checkEnv} from './ensure-env';
-import {splitStringToArray} from './utils';
 import {tagRelease} from './tag-release';
+import {getPackCli} from './pack';
+import {splitStringToArray} from './utils';
 
 async function run() {
   try {
@@ -23,9 +24,16 @@ async function run() {
     const useremail = core.getInput('tag-release-useremail', {required: false});
     const branch = core.getInput('tag-release-branch', {required: false});
     const tag = core.getInput('tag-release-tag', {required: false}) || branch;
-    const tagPrefix = core.getInput('tag-release-tag-prefix', {required: false}) || 'v';
+    const tagPrefix =
+      core.getInput('tag-release-tag-prefix', {required: false}) || 'v';
     if (username && useremail && branch && tag) {
       await tagRelease(username, useremail, branch, tag, tagPrefix);
+    }
+
+    // pack cli
+    const packVersion = core.getInput('pack-version', {required: false});
+    if (packVersion) {
+      await getPackCli(packVersion);
     }
   } catch (error) {
     core.setFailed(error.message);

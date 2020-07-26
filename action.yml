@@ -30,6 +30,9 @@ inputs:
   tag-release-tag-prefix:
     description: 'Prefix for tag-release-tag, defaults to "v"'
     required: false
+  pack-version:
+    description: 'Buildpacks.io pack version to install'
+    required: false
 runs:
   using: 'node12'
   main: 'dist/index.js'
