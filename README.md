@@ -47,6 +47,18 @@ steps:
 ```
 See [docs/tag-release.adoc](docs/tag-release.adoc)
 
+## Commit Changes
+```yaml
+steps:
+- uses: jvalkeal/build-zoo-handler@main
+  with:
+    commit-changes-username: 'Whoami'
+    commit-changes-useremail: 'whoami@example.org'
+    commit-changes-branch: main
+    commit-changes-message: Commit message
+```
+See [docs/commit-changes.adoc](docs/commit-changes.adoc)
+
 ## Pack Feature
 ```yaml
 steps:
