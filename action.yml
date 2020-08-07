@@ -30,8 +30,44 @@ inputs:
   tag-release-tag-prefix:
     description: 'Prefix for tag-release-tag, defaults to "v"'
     required: false
+  commit-changes-username:
+    description: 'Sets git user.name which will be used for git commands'
+    required: false
+  commit-changes-useremail:
+    description: 'Sets git user.email which will be used for git commands'
+    required: false
+  commit-changes-branch:
+    description: 'Branch name used to commit changes'
+    required: false
+  commit-changes-message:
+    description: 'Message for git commit'
+    required: false
   pack-version:
     description: 'Buildpacks.io pack version to install'
+    required: false
+  dispatch-handler-token:
+    description: 'Github api token for operations'
+    required: false
+  dispatch-handler-owner:
+    description: 'Target repo owner of a distatch'
+    required: false
+  dispatch-handler-repo:
+    description: 'Target repo name of a dispatch'
+    required: false
+  dispatch-handler-event-type:
+    description: 'Repository dispatch event type, defaults to "build-zoo-handler"'
+    required: false
+  dispatch-handler-client-payload-data:
+    description: 'Action spesific payload data'
+    required: false
+  dispatch-handler-max:
+    description: 'Maximum dispatch round trips, defaults to "10"'
+    required: false
+  dispatch-handler-config:
+    description: 'Action spesific dispatch control config'
+    required: false
+  dispatch-handler-extract-context-properties:
+    description: 'Extract zoo related context properties to environment, defaults to false'
     required: false
 runs:
   using: 'node12'

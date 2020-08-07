@@ -143,7 +143,9 @@ function getDownloadInfo(
   if (!version || version.length === 0) {
     throw new Error('Cli version missing');
   }
+  core.info(`Pack version to install is ${version}`);
   const fileEnding = arch === 'windows' ? 'zip' : 'tgz';
   let curUrl = `https://github.com/buildpacks/pack/releases/download/v${version}/pack-v${version}-${arch}.${fileEnding}`;
+  core.info(`Using url ${curUrl}`);
   return {version: version, url: curUrl};
 }

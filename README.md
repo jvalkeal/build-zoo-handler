@@ -21,6 +21,7 @@ steps:
       gradle
       mvn
 ```
+See [docs/ensure-commands.adoc](docs/ensure-commands.adoc)
 
 ## Ensure Environment Variables
 ```yaml
@@ -31,6 +32,7 @@ steps:
       M2_HOME
       GRADLE_HOME
 ```
+See [docs/ensure-env.adoc](docs/ensure-env.adoc)
 
 ## Tag Release
 ```yaml
@@ -43,6 +45,7 @@ steps:
     tag-release-tag: 0.0.0
     tag-release-tag-prefix: v
 ```
+See [docs/tag-release.adoc](docs/tag-release.adoc)
 
 ## Pack Feature
 ```yaml
@@ -51,6 +54,13 @@ steps:
   with:
     pack-version: 0.12.0
 ```
+See [docs/pack.adoc](docs/pack.adoc)
+
+## Workflow Dispatch Handler
+This feature is meant to run a _release train_ throughout a list of workflow
+dispatch definitions.
+
+See [docs/dispatch-handler.adoc](docs/dispatch-handler.adoc)
 
 # License
 

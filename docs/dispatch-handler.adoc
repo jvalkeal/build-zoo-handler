@@ -1,0 +1,16 @@
+# Dispatch Handler
+
+Feature to centrally handle repository dispatches consist of a two parts,
+firstly to have a workflow which acts as a central dispatch controller
+listenting dispatch messages, and secondly able to send dispatch message into
+a controller. Together these two features can orchestrate event based dispatch
+flow starting from one workflow originating from an GitHub UI as a workflow
+dispatch and ending when there is no more work to do.
+
+Generic idea of this feature is to handle a _Release Train_ where multiple
+Github projects depends on each others so that one needs to be build and
+released before dependant project can build build and released. As a simple
+example you have three _Spring Boot_ projects, `project1`,
+`project2` and `project3` where dependency tree simply is
+`project1` -> `project2` -> `project3`.
+

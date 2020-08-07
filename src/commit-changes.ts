@@ -1,20 +1,16 @@
 import * as core from '@actions/core';
 import {exec} from '@actions/exec';
 
-export async function tagRelease(
+export async function commitChanges(
   username: string,
   useremail: string,
   branch: string,
-  tag: string,
-  tagPrefix: string
+  message: string
 ): Promise<void> {
   await runCli(['config', '--global', 'user.name', username]);
   await runCli(['config', '--global', 'user.email', useremail]);
-  await runCli(['checkout', '-b', branch]);
-  await runCli(['commit', '-a', '-m', `Release ${branch}`]);
+  await runCli(['commit', '-a', '-m', `${message}`]);
   await runCli(['push', 'origin', `${branch}`]);
-  await runCli(['tag', `${tagPrefix}${tag}`]);
-  await runCli(['push', '--tags', 'origin']);
 }
 
 async function runCli(args: string[] | undefined) {
