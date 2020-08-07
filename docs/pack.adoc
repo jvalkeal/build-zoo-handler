@@ -1,4 +1,14 @@
 # Pack
 
-xxx
+Feature to install _buildpacks.io_ `pack` client into a path.
 
+[source,yaml]
+----
+- uses: jvalkeal/build-zoo-handler@main
+  with:
+    pack-version: 0.12.0
+----
+
+There is one option `pack-version` if given will enable this
+feature and install a client. Client version is resolved from
+https://github.com/buildpacks/pack[buildpacks.io repo].
