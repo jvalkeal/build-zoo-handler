@@ -1,7 +1,8 @@
 name: Main workflow
 on: [push, pull_request]
 jobs:
-  run:
+
+  build:
     name: Run
     runs-on: ${{ matrix.operating-system }}
     strategy:
@@ -24,3 +25,29 @@ jobs:
 
     - name: npm test
       run: npm test
+
+  test-pack:
+    runs-on: ${{ matrix.operating-system }}
+    strategy:
+      matrix:
+        operating-system: [ubuntu-latest, windows-latest]
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Clear tool cache
+      if: runner.os != 'windows'
+      run: mv "${{ runner.tool_cache }}" "${{ runner.tool_cache }}.old"
+    - name: Clear tool cache (Windows)
+      if: runner.os == 'windows'
+      run: move "${{ runner.tool_cache }}" "${{ runner.tool_cache }}.old"
+    - name: Setup Pack
+      id: setup-pack
+      uses: ./
+      with:
+        pack-version: 0.11.2
+    - name: Verify Pack (Linux)
+      if: runner.os != 'windows'
+      run: __tests__/verify-pack.sh 0.11.2
+    - name: Verify Pack (Windows)
+      if: runner.os == 'windows'
+      run: __tests__/verify-pack.ps1 0.11.2
