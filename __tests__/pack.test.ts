@@ -16,16 +16,13 @@ let cliFilePath = '';
 let cliUrl = '';
 if (process.platform === 'win32') {
   cliFilePath = path.join(cliDir, 'cli_win.zip');
-  cliUrl =
-    'https://github.com/buildpacks/pack/releases/download/v0.12.0/pack-v0.12.0-windows.zip';
+  cliUrl = 'https://github.com/buildpacks/pack/releases/download/v0.12.0/pack-v0.12.0-windows.zip';
 } else if (process.platform === 'darwin') {
   cliFilePath = path.join(cliDir, 'cli_mac.tgz');
-  cliUrl =
-    'https://github.com/buildpacks/pack/releases/download/v0.12.0/pack-v0.12.0-macos.tgz';
+  cliUrl = 'https://github.com/buildpacks/pack/releases/download/v0.12.0/pack-v0.12.0-macos.tgz';
 } else {
   cliFilePath = path.join(cliDir, 'cli_linux.tgz');
-  cliUrl =
-    'https://github.com/buildpacks/pack/releases/download/v0.12.0/pack-v0.12.0-linux.tgz';
+  cliUrl = 'https://github.com/buildpacks/pack/releases/download/v0.12.0/pack-v0.12.0-linux.tgz';
 }
 
 describe('cli installer tests', () => {

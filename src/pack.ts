@@ -42,9 +42,7 @@ export async function getPackCli(version: string): Promise<void> {
   if (toolPath) {
     core.debug(`Tool found in cache ${toolPath}`);
   } else {
-    core.debug(
-      'Downloading CLI from https://github.com/buildpacks/pack/releases'
-    );
+    core.debug('Downloading CLI from https://github.com/buildpacks/pack/releases');
 
     const downloadInfo = getDownloadInfo(version, arch);
     core.debug(`DownloadInfo ${downloadInfo.version} ${downloadInfo.url}`);
@@ -54,23 +52,12 @@ export async function getPackCli(version: string): Promise<void> {
     const cliVersion = downloadInfo.version;
     const compressedFileExtension = IS_WINDOWS ? '.zip' : '.tgz';
 
-    let tempDir: string = path.join(
-      pack,
-      'temp_' + Math.floor(Math.random() * 2000000000)
-    );
+    let tempDir: string = path.join(pack, 'temp_' + Math.floor(Math.random() * 2000000000));
     core.debug(`tempDir ${tempDir}`);
 
-    const cliDir = await unzipCliDownload(
-      cliFile,
-      compressedFileExtension,
-      tempDir
-    );
+    const cliDir = await unzipCliDownload(cliFile, compressedFileExtension, tempDir);
     core.debug(`cli extracted to ${cliDir}`);
-    toolPath = await tc.cacheDir(
-      cliDir,
-      toolName,
-      getCacheVersionString(cliVersion)
-    );
+    toolPath = await tc.cacheDir(cliDir, toolName, getCacheVersionString(cliVersion));
   }
   core.addPath(toolPath);
 }
@@ -97,11 +84,7 @@ function getFileEnding(file: string): string {
   return fileEnding;
 }
 
-async function extractFiles(
-  file: string,
-  fileEnding: string,
-  destinationFolder: string
-): Promise<void> {
+async function extractFiles(file: string, fileEnding: string, destinationFolder: string): Promise<void> {
   const stats = fs.statSync(file);
   if (!stats) {
     throw new Error(`Failed to extract ${file} - it doesn't exist`);
@@ -118,11 +101,7 @@ async function extractFiles(
   }
 }
 
-async function unzipCliDownload(
-  repoRoot: string,
-  fileEnding: string,
-  destinationFolder: string
-): Promise<string> {
+async function unzipCliDownload(repoRoot: string, fileEnding: string, destinationFolder: string): Promise<string> {
   // Create the destination folder if it doesn't exist
   await io.mkdirP(destinationFolder);
 
@@ -136,10 +115,7 @@ async function unzipCliDownload(
   }
 }
 
-function getDownloadInfo(
-  version: string,
-  arch: string
-): {version: string; url: string} {
+function getDownloadInfo(version: string, arch: string): {version: string; url: string} {
   if (!version || version.length === 0) {
     throw new Error('Cli version missing');
   }

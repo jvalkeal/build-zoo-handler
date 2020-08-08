@@ -11,9 +11,6 @@ describe('workflow dispatch handler tests', () => {
       owner: 'owner1',
       event: 'event1'
     };
-    const res = await jexl.eval(
-      "event == 'event1' && repo == 'repo1' && owner == 'owner1'",
-      context
-    );
+    const res = await jexl.eval("event == 'event1' && repo == 'repo1' && owner == 'owner1'", context);
   }, 100000);
 });
