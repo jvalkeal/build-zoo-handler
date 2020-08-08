@@ -1,4 +1,19 @@
 # Tag Release
 
-xxx
+Feature to automatically create a new branch and a tag and commit those
+into repository.
 
+[source,yaml]
+----
+- uses: jvalkeal/build-zoo-handler@main
+  with:
+    tag-release-username: 'Whoami'
+    tag-release-useremail: 'whoami@example.org'
+    tag-release-branch: 0.0.0
+    tag-release-tag: 0.0.0
+    tag-release-tag-prefix: v
+----
+
+Feature is enabled when all `tag-release-username`, `tag-release-useremail`,
+`tag-release-branch` and `tag-release-tag` are set. `tag-release-tag-prefix`
+defaults to empty value.

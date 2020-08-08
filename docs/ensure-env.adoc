@@ -1,4 +1,15 @@
 # Ensure Env
 
-xxx
+Feature to enforce that certain environment variables exists in an
+environment allowing to fail fast if further steps down in a line
+would behave badly in a case where env variable is not present.
 
+[source,yaml]
+----
+steps:
+- uses: jvalkeal/build-zoo-handler@main
+  with:
+    ensure-env: |
+      M2_HOME
+      GRADLE_HOME
+----
