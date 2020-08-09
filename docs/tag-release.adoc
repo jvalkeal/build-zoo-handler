@@ -14,6 +14,9 @@ into repository.
     tag-release-tag-prefix: v
 ----
 
-Feature is enabled when all `tag-release-username`, `tag-release-useremail`,
-`tag-release-branch` and `tag-release-tag` are set. `tag-release-tag-prefix`
-defaults to empty value.
+Feature is enabled when `tag-release-branch` is set.
+
+`tag-release-tag` defaults to value from a `tag-release-branch` and
+`tag-release-tag-prefix` defaults to an empty value. `tag-release-username`
+ and `tag-release-useremail` default to _github-actions[bot]_ and
+_41898282+github-actions[bot]@users.noreply.github.com_ respectively.

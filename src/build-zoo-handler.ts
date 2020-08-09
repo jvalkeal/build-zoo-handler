@@ -40,12 +40,12 @@ async function run() {
     }
 
     // tag release
-    const username = core.getInput('tag-release-username', {required: false});
-    const useremail = core.getInput('tag-release-useremail', {required: false});
+    const username = core.getInput('tag-release-username', {required: false}) || DEFAULT_USERNAME;
+    const useremail = core.getInput('tag-release-useremail', {required: false}) || DEFAULT_USEREMAIL;
     const branch = core.getInput('tag-release-branch', {required: false});
     const tag = core.getInput('tag-release-tag', {required: false}) || branch;
     const tagPrefix = core.getInput('tag-release-tag-prefix', {required: false}) || 'v';
-    if (username && useremail && branch && tag) {
+    if (branch && tag) {
       core.startGroup('Tag Release Feature');
       await tagRelease(username, useremail, branch, tag, tagPrefix);
       core.endGroup();
