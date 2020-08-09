@@ -44,8 +44,8 @@ jobs:
     - name: Do Something
       run: echo hi
 
-    # zoo notify
-    - name: Notify Build Zoo Handler Controller
+    # zoo notify success
+    - name: Notify Build Success Zoo Handler Controller
       uses: jvalkeal/build-zoo-handler@main
       with:
         dispatch-handler-token: ${{ secrets.REPO_ACCESS_TOKEN }}
@@ -55,6 +55,21 @@ jobs:
         dispatch-handler-client-payload-data: >
           {
             "event": "work-succeed"
+          }
+
+    # zoo notify failed
+    - name: Notify Build Failure Zoo Handler Controller
+      if: ${{ failure() }}
+      uses: jvalkeal/build-zoo-handler@main
+      with:
+        dispatch-handler-token: ${{ secrets.REPO_ACCESS_TOKEN }}
+        dispatch-handler-owner: owner
+        dispatch-handler-repo: repo1
+        dispatch-handler-event-type: build-zoo-handler-example
+        dispatch-handler-client-payload-data: >
+          {
+            "event": "work-failed",
+            "message": "repo2 failed"
           }
 ----
 
@@ -76,8 +91,8 @@ jobs:
     - name: Do Something
       run: echo hi
 
-    # zoo notify
-    - name: Notify Build Zoo Handler Controller
+    # zoo notify success
+    - name: Notify Build Success Zoo Handler Controller
       uses: jvalkeal/build-zoo-handler@main
       with:
         dispatch-handler-token: ${{ secrets.REPO_ACCESS_TOKEN }}
@@ -87,6 +102,21 @@ jobs:
         dispatch-handler-client-payload-data: >
           {
             "event": "work-succeed"
+          }
+
+    # zoo notify failed
+    - name: Notify Build Failure Zoo Handler Controller
+      if: ${{ failure() }}
+      uses: jvalkeal/build-zoo-handler@main
+      with:
+        dispatch-handler-token: ${{ secrets.REPO_ACCESS_TOKEN }}
+        dispatch-handler-owner: owner
+        dispatch-handler-repo: repo1
+        dispatch-handler-event-type: build-zoo-handler-example
+        dispatch-handler-client-payload-data: >
+          {
+            "event": "work-failed",
+            "message": "repo3 failed"
           }
 ----
 
@@ -116,15 +146,28 @@ jobs:
           [
             {
               "if": "initial == true",
-              "owner": "owner",
-              "repo": "repo2",
-              "event_type": "build-zoo-handler-example"
+              "action": "repository_dispatch",
+              "repository_dispatch": {
+                "owner": "owner",
+                "repo": "repo2",
+                "event_type": "build-zoo-handler-example"
+              }
             },
             {
               "if": "data.event == 'work-succeed' && data.repo == 'repo2' && data.owner == 'owner'",
-              "owner": "owner",
-              "repo": "repo1",
-              "event_type": "build-zoo-handler-example"
+              "action": "repository_dispatch",
+              "repository_dispatch": {
+                "owner": "owner",
+                "repo": "repo1",
+                "event_type": "build-zoo-handler-example"
+              }
+            },
+            {
+              "if": "data.event == 'work-failed'",
+              "action": "fail",
+              "fail": {
+                "message": "hi, something went wrong"
+              }
             }
           ]
 ----
@@ -140,3 +183,6 @@ to presence of _workflow dispatch_ few things happen after that.
 * Then controller goes ahead and dispatches into `repo3`.
 * `repo3` calls home and there is no more work to do.
 * Dispatch flow stops there.
+* In case remote workflow fails, fallback step runs and notifies controller
+  about its failure and then controller workflow fails as well together
+  with a `message` payload field passed in from a remote workflow.

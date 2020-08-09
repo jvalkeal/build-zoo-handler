@@ -47,7 +47,21 @@ export async function handle(token: string, config: string, max: number): Promis
 
   if (matchConfig) {
     core.info(`Match config to use for dispatch\n ${inspect(matchConfig, true, 10)}`);
-    await sendRepositoryDispatch(token, matchConfig.owner, matchConfig.repo, matchConfig.event_type, p);
+    if (matchConfig.action === HandlerConfigAction.repository_dispatch && matchConfig.repository_dispatch) {
+      await sendRepositoryDispatch(
+        token,
+        matchConfig.repository_dispatch?.owner,
+        matchConfig.repository_dispatch.repo,
+        matchConfig.repository_dispatch.event_type,
+        p
+      );
+    } else if (matchConfig.action === HandlerConfigAction.fail) {
+      let message = matchConfig?.fail?.message || 'Unknown error';
+      if (data.message) {
+        message = message.concat('; ', data.message);
+      }
+      throw new Error(message);
+    }
   } else {
     core.info('Nothing to do, bye bye');
   }
@@ -178,6 +192,7 @@ export interface ClientPayloadData {
   event?: string;
   owner?: string;
   repo?: string;
+  message?: string;
   [key: string]: any;
   properties?: {[key: string]: string};
 }
@@ -193,26 +208,30 @@ export interface ExpressionContext {
   data: ClientPayloadData;
 }
 
-interface HandlerConfig {
-  if: string;
+enum HandlerConfigAction {
+  repository_dispatch = 'repository_dispatch',
+  fail = 'fail'
+}
+
+interface HandlerConfigRepositoryDispatch {
   owner: string;
   repo: string;
   event_type: string;
 }
 
-export function getHandlerConfigsFromJson(json: string): HandlerConfig[] {
-  const jsonConfig = JSON.parse(json);
-  core.debug(`JSON config: ${inspect(jsonConfig)}`);
+interface HandlerConfigFail {
+  message: string;
+}
 
-  const configs: HandlerConfig[] = [];
-  for (const jc of jsonConfig) {
-    const config: HandlerConfig = {
-      if: jc.if,
-      owner: jc.owner,
-      repo: jc.repo,
-      event_type: jc.event_type ? jc.event_type : 'build-zoo-handler'
-    };
-    configs.push(config);
-  }
-  return configs;
+interface HandlerConfig {
+  if: string;
+  action: HandlerConfigAction;
+  repository_dispatch?: HandlerConfigRepositoryDispatch;
+  fail?: HandlerConfigFail;
+}
+
+export function getHandlerConfigsFromJson(json: string): HandlerConfig[] {
+  const jsonConfig: HandlerConfig[] = JSON.parse(json);
+  core.debug(`JSON config: ${inspect(jsonConfig)}`);
+  return jsonConfig;
 }
