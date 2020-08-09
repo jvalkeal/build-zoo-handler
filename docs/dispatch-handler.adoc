@@ -1,3 +1,4 @@
+[dispatch-handler]
 # Dispatch Handler
 
 Feature to centrally handle repository dispatches consist of a two parts,
@@ -18,7 +19,228 @@ This feature splits into two parts, firstly it can send a repository
 dispatch messages, and secondly centrally control these dispatch messages
 to make decision what to do next in a flow.
 
-## Example with Two Repos
+## Dispatch Context
+
+Central consept of this feature is a _context_ which is kept alive as long
+as workflows are able to ping/pong message between each others. This _context_
+object is a simple reserved field in a `repository_dispatch` _client payload_.
+
+Controller itself will contribute a field `handler_count` as a number and every
+dispatched message either from controller or remove workflow will increment this
+value. Reason for existence of this value is to simply safe guard dispatch flow
+from a loop and on default will error out after 10 dispatches. Setting
+`dispatch-handler-max` can be used to change this max value.
+
+This dispatch context itself cannot get directly modified by a user or a workflow
+but there is another `data` object which remote workflow can use to add properties
+into a context. Essentially only controller workflow action itself can modify this
+context.
+
+## Contribute to Context
+
+Easiest way to contibute into a context from a step is to just set an env variable
+prefixed with `BUILD_ZOO_HANDLER_` and remaining string in that variable will be
+added to a context with its value. For example:
+
+[source,yml]
+----
+steps:
+  - name: Do Something
+    run: |
+      echo ::set-env name=BUILD_ZOO_HANDLER_property1::value1
+----
+
+Will add `property1` with value `value1`.
+
+If your step is actually doing something with a maven build i.e. changing project version
+you can easily add this to context with:
+
+[source,yml]
+----
+steps:
+  - name: Do Something
+    run: |
+      echo ::set-env name=BUILD_ZOO_HANDLER_myproject_version::$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+----
+
+Then later in a flow if you need to update dependant maven pom files you can read this
+property from a context and do things accordingly. For example update pom property:
+
+[source,yml]
+----
+steps:
+  - name: Do Something
+    run: |
+      mvn versions:set-property \
+        -DgenerateBackupPoms=false \
+        -Dproperty=myproject.version \
+        -DnewVersion=$BUILD_ZOO_HANDLER_myproject_version
+----
+
+## Dispatch to Remote Workflow
+
+In a workflow controller config you can create a list of configs which will get enabled
+with an evaluation of an exression with `if` field. More about this in <<dispatch-handler-language>>.
+
+Below example would simply send a _repository dispatch_ to `myowner/myrepos` if data
+object matches with an expression.
+
+[source,json]
+----
+dispatch-handler-config: >
+  [
+    {
+      "if": "data.event == 'release-succeed' && data.repo == 'myrepo' && data.owner == 'myowner'",
+      "action": "repository_dispatch",
+      "repository_dispatch": {
+        "owner": "myowner",
+        "repo": "myrepo",
+        "event_type": "build-zoo-handler-release"
+      }
+    }
+  ]
+----
+
+There is a special hook within an action controller code which sets `data` objects
+`initial` field to `true` so that you are able to start a flow from an GitHub
+_workflow dispatch_ when _context_ is still empty and nothing has been executed.
+Essentially this is happens when we detect that it is a first run of a workflow
+within controller flow.
+
+[source,json]
+----
+dispatch-handler-config: >
+  [
+    {
+      "if": "initial == true",
+      "action": "repository_dispatch",
+      "repository_dispatch": {
+        "owner": "myowner",
+        "repo": "myrepo",
+        "event_type": "build-zoo-handler-release"
+      }
+    }
+  ]
+----
+
+
+## Notify Failure to Controller
+
+Action type `fail` is a second type of an action what a remote workflow can send
+back to a controller to indicate a failure. You need to hook these together by
+first sending _event_ with an optional _message:
+
+[NOTE]
+====
+Exactly from where did `BUILD_ZOO_HANDLER_myproject_version` came from,
+see <<dispatch-handler-remote>> for explanation.
+====
+
+[source,json]
+----
+dispatch-handler-client-payload-data: >
+  {
+    "event": "next-dev-version-failed",
+    "message": "my build failed"
+  }
+----
+
+Then on a controller side you can process these with:
+
+[source,json]
+----
+dispatch-handler-config: >
+  [
+    {
+      "if": "data.event == 'next-dev-version-failed'",
+      "action": "fail",
+      "fail": {
+        "message": "hi, something went wrong"
+      }
+    }
+  ]
+----
+
+[dispatch-handler-remote]
+## Remote Workflow Model
+
+It is possible to automatically import all _dispatch context_ properties
+into an environment variables. Action enforces a prefix `BUILD_ZOO_HANDLER_`.
+
+[source,yaml]
+----
+ # zoo extract and ensure
+ - name: Extract Zoo Context Properties
+   uses: jvalkeal/build-zoo-handler@main
+   with:
+     dispatch-handler-extract-context-properties: true
+     ensure-env: |
+       BUILD_ZOO_HANDLER_myproject_version
+----
+
+In an above case if _context_ properties had a variable `myproject` it was extracted
+as an env variable named _BUILD_ZOO_HANDLER_myproject_version_ with its value. At a
+same time we used _Ensure Env_ feature to fail fast if that env variable is not
+present.
+
+[dispatch-handler-controller]
+## Controller Workflow Config Model
+
+With a `dispatch-handler-config` you need to provide a configuration in a format
+of a special json.
+
+Type of a model is a list of object of _HandlerConfig_:
+
+[source,typescript]
+----
+enum HandlerConfigAction {
+  repository_dispatch = 'repository_dispatch',
+  fail = 'fail'
+}
+
+interface HandlerConfigRepositoryDispatch {
+  owner: string;
+  repo: string;
+  event_type: string;
+}
+
+interface HandlerConfigFail {
+  message: string;
+}
+
+interface HandlerConfig {
+  if: string;
+  action: HandlerConfigAction;
+  repository_dispatch?: HandlerConfigRepositoryDispatch;
+  fail?: HandlerConfigFail;
+}
+----
+
+[dispatch-handler-language]
+## Data Expression Language
+
+As previously discussed a `if` field in a _handler config_ is an expression language
+currently based on https://www.npmjs.com/package/jexl[jexl]. Config section is enabled
+if this expression evaluates to _true_ and then what's in it will get executed.
+
+Type of an evaluation object passed to this expression is:
+[source,typescript]
+----
+export interface ClientPayloadData {
+  event?: string;
+  owner?: string;
+  repo?: string;
+  message?: string;
+  properties?: {[key: string]: string};
+  [key: string]: any;
+}
+----
+
+## Examples
+
+Here we have some useful samples how to use this dispatch feature.
+
+### Example with Two Repos
 
 We'd have a three repositories under user `owner` named `repo1`, `repo2`
 and `repo3`. Firstly we can create a workflow on a repo `repo2` which
