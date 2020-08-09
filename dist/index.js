@@ -3554,6 +3554,7 @@ const github = __importStar(__webpack_require__(469));
 const jexl_1 = __importDefault(__webpack_require__(325));
 const util_1 = __webpack_require__(669);
 function handle(token, config, max) {
+    var _a, _b;
     return __awaiter(this, void 0, void 0, function* () {
         core.debug(`github context: ${util_1.inspect(github.context, true, 10)}`);
         const context = getCurrentContext();
@@ -3592,7 +3593,16 @@ function handle(token, config, max) {
         core.info(`New zoo context:\n ${util_1.inspect(p.build_zoo_handler_context, true, 10)}`);
         if (matchConfig) {
             core.info(`Match config to use for dispatch\n ${util_1.inspect(matchConfig, true, 10)}`);
-            yield sendRepositoryDispatch(token, matchConfig.owner, matchConfig.repo, matchConfig.event_type, p);
+            if (matchConfig.action === HandlerConfigAction.repository_dispatch && matchConfig.repository_dispatch) {
+                yield sendRepositoryDispatch(token, (_a = matchConfig.repository_dispatch) === null || _a === void 0 ? void 0 : _a.owner, matchConfig.repository_dispatch.repo, matchConfig.repository_dispatch.event_type, p);
+            }
+            else if (matchConfig.action === HandlerConfigAction.fail) {
+                let message = ((_b = matchConfig === null || matchConfig === void 0 ? void 0 : matchConfig.fail) === null || _b === void 0 ? void 0 : _b.message) || 'Unknown error';
+                if (data.message) {
+                    message = message.concat('; ', data.message);
+                }
+                throw new Error(message);
+            }
         }
         else {
             core.info('Nothing to do, bye bye');
@@ -3614,12 +3624,10 @@ function evaluate(expression, context) {
 }
 function handleRepositoryDispatch(token, owner, repo, eventType, clientPayloadData) {
     return __awaiter(this, void 0, void 0, function* () {
-        if (clientPayloadData.owner === undefined &&
-            github.context.payload.repository) {
+        if (clientPayloadData.owner === undefined && github.context.payload.repository) {
             clientPayloadData.owner = github.context.payload.repository.owner.login;
         }
-        if (clientPayloadData.repo === undefined &&
-            github.context.payload.repository) {
+        if (clientPayloadData.repo === undefined && github.context.payload.repository) {
             clientPayloadData.repo = github.context.payload.repository.name;
         }
         if (clientPayloadData.properties === undefined) {
@@ -3663,8 +3671,7 @@ function extractContextProperties() {
     return __awaiter(this, void 0, void 0, function* () {
         let count = 0;
         try {
-            const props = github.context.payload.client_payload
-                .build_zoo_handler_context.properties;
+            const props = github.context.payload.client_payload.build_zoo_handler_context.properties;
             for (let key in props) {
                 const value = props[key];
                 core.exportVariable(`BUILD_ZOO_HANDLER_${key}`, value);
@@ -3693,8 +3700,7 @@ function readContextProperties() {
     return props;
 }
 function getCurrentContext() {
-    if (github.context.payload.client_payload &&
-        github.context.payload.client_payload.build_zoo_handler_context) {
+    if (github.context.payload.client_payload && github.context.payload.client_payload.build_zoo_handler_context) {
         return github.context.payload.client_payload.build_zoo_handler_context;
     }
     else {
@@ -3702,28 +3708,22 @@ function getCurrentContext() {
     }
 }
 function getCurrentData() {
-    if (github.context.payload.client_payload &&
-        github.context.payload.client_payload.build_zoo_handler_data) {
+    if (github.context.payload.client_payload && github.context.payload.client_payload.build_zoo_handler_data) {
         return github.context.payload.client_payload.build_zoo_handler_data;
     }
     else {
         return {};
     }
 }
+var HandlerConfigAction;
+(function (HandlerConfigAction) {
+    HandlerConfigAction["repository_dispatch"] = "repository_dispatch";
+    HandlerConfigAction["fail"] = "fail";
+})(HandlerConfigAction || (HandlerConfigAction = {}));
 function getHandlerConfigsFromJson(json) {
     const jsonConfig = JSON.parse(json);
     core.debug(`JSON config: ${util_1.inspect(jsonConfig)}`);
-    const configs = [];
-    for (const jc of jsonConfig) {
-        const config = {
-            if: jc.if,
-            owner: jc.owner,
-            repo: jc.repo,
-            event_type: jc.event_type ? jc.event_type : 'build-zoo-handler'
-        };
-        configs.push(config);
-    }
-    return configs;
+    return jsonConfig;
 }
 exports.getHandlerConfigsFromJson = getHandlerConfigsFromJson;
 
@@ -11540,21 +11540,19 @@ function run() {
                 core.endGroup();
             }
             // tag release
-            const username = core.getInput('tag-release-username', { required: false });
-            const useremail = core.getInput('tag-release-useremail', { required: false });
+            const username = core.getInput('tag-release-username', { required: false }) || DEFAULT_USERNAME;
+            const useremail = core.getInput('tag-release-useremail', { required: false }) || DEFAULT_USEREMAIL;
             const branch = core.getInput('tag-release-branch', { required: false });
             const tag = core.getInput('tag-release-tag', { required: false }) || branch;
             const tagPrefix = core.getInput('tag-release-tag-prefix', { required: false }) || 'v';
-            if (username && useremail && branch && tag) {
+            if (branch && tag) {
                 core.startGroup('Tag Release Feature');
                 yield tag_release_1.tagRelease(username, useremail, branch, tag, tagPrefix);
                 core.endGroup();
             }
             // commit changes
-            const commitUsername = core.getInput('commit-changes-username', { required: false }) ||
-                DEFAULT_USERNAME;
-            const commitUseremail = core.getInput('commit-changes-useremail', { required: false }) ||
-                DEFAULT_USEREMAIL;
+            const commitUsername = core.getInput('commit-changes-username', { required: false }) || DEFAULT_USERNAME;
+            const commitUseremail = core.getInput('commit-changes-useremail', { required: false }) || DEFAULT_USEREMAIL;
             const commitBranch = core.getInput('commit-changes-branch', {
                 required: false
             });
