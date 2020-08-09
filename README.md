@@ -5,8 +5,21 @@
 </p>
 
 This action by itself and without a proper configuration does nothing.
+Provides these features which are described more detailed in a rest
+of a documentation.
 
-- Setup commands which needs to exist to fails fast.
+- Ensure env variables to fail fast.
+- Ensure commands in a path to fail fast.
+- Setup buildpacks.io pack client.
+- Easy way to commit changes back to repository.
+- Opinionated way to branch and tag changes.
+- Central repository dispatch system for "release train".
+
+NOTE: Please do not use `main` as version as it is a just a development
+      version and can contain breaking changes and be unstable. Also
+      check related documentation from a tag to know what is in that
+      particular version as README and docs content in `main` always
+      reflect main dev state.
 
 # Usage
 
