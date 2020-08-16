@@ -158,7 +158,8 @@ export async function handleWorkflowDispatch(
   owner: string,
   repo: string,
   clientPayloadData: ClientPayloadData,
-  workflow: string
+  workflow: string,
+  ref: string
 ) {
 
   if (clientPayloadData.owner === undefined && github.context.payload.repository) {
@@ -189,7 +190,7 @@ export async function handleWorkflowDispatch(
   };
   inputs['build-zoo-handler'] = new Buffer(JSON.stringify(clientPayload)).toString('base64')
 
-  await sendWorkflowDispatch(token, owner, repo, workflow, 'master', inputs);
+  await sendWorkflowDispatch(token, owner, repo, workflow, ref, inputs);
   core.info('Workflow dispatch sent successfully');
 }
 

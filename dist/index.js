@@ -3679,7 +3679,7 @@ function sendRepositoryDispatch(token, owner, repo, eventType, clientPayload) {
     });
 }
 exports.sendRepositoryDispatch = sendRepositoryDispatch;
-function handleWorkflowDispatch(token, owner, repo, clientPayloadData, workflow) {
+function handleWorkflowDispatch(token, owner, repo, clientPayloadData, workflow, ref) {
     return __awaiter(this, void 0, void 0, function* () {
         if (clientPayloadData.owner === undefined && github.context.payload.repository) {
             clientPayloadData.owner = github.context.payload.repository.owner.login;
@@ -3705,7 +3705,7 @@ function handleWorkflowDispatch(token, owner, repo, clientPayloadData, workflow)
             build_zoo_handler_data: clientPayloadData
         };
         inputs['build-zoo-handler'] = new Buffer(JSON.stringify(clientPayload)).toString('base64');
-        yield sendWorkflowDispatch(token, owner, repo, workflow, 'master', inputs);
+        yield sendWorkflowDispatch(token, owner, repo, workflow, ref, inputs);
         core.info('Workflow dispatch sent successfully');
     });
 }
@@ -11656,15 +11656,16 @@ function run() {
             const dispatchHandlerMax = Number(inputNotRequired('dispatch-handler-max') || '10');
             const dispatchHandlerClientPayloadData = inputNotRequired('dispatch-handler-client-payload-data');
             const dispatchHandlerWorkflow = inputNotRequired('dispatch-handler-workflow');
+            const dispatchHandlerRef = inputNotRequired('dispatch-handler-ref');
             if (dispatchHandlerConfig) {
                 core.startGroup('Dispatch Handler Feature - Handle');
                 yield dispatch_handler_1.handle(dispatchHandlerToken, dispatchHandlerConfig, dispatchHandlerMax);
                 core.endGroup();
             }
-            else if (dispatchHandlerWorkflow && dispatchHandlerClientPayloadData) {
+            else if (dispatchHandlerWorkflow && dispatchHandlerRef && dispatchHandlerClientPayloadData) {
                 core.startGroup('Dispatch Handler Feature - Dispatch Workflow');
                 const data = JSON.parse(dispatchHandlerClientPayloadData);
-                yield dispatch_handler_1.handleWorkflowDispatch(dispatchHandlerToken, dispatchHandlerOwner, dispatchHandlerRepo, data, dispatchHandlerWorkflow);
+                yield dispatch_handler_1.handleWorkflowDispatch(dispatchHandlerToken, dispatchHandlerOwner, dispatchHandlerRepo, data, dispatchHandlerWorkflow, dispatchHandlerRef);
                 core.endGroup();
             }
             else if (dispatchHandlerClientPayloadData) {

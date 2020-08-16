@@ -60,6 +60,9 @@ inputs:
   dispatch-handler-client-payload-data:
     description: 'Action spesific payload data'
     required: false
+  dispatch-handler-ref:
+    description: 'Workflow ref'
+    required: false
   dispatch-handler-workflow:
     description: 'Workflow id workflow file name'
     required: false

@@ -85,12 +85,13 @@ async function run() {
     const dispatchHandlerMax = Number(inputNotRequired('dispatch-handler-max') || '10');
     const dispatchHandlerClientPayloadData = inputNotRequired('dispatch-handler-client-payload-data');
     const dispatchHandlerWorkflow = inputNotRequired('dispatch-handler-workflow');
+    const dispatchHandlerRef = inputNotRequired('dispatch-handler-ref');
 
     if (dispatchHandlerConfig) {
       core.startGroup('Dispatch Handler Feature - Handle');
       await handle(dispatchHandlerToken, dispatchHandlerConfig, dispatchHandlerMax);
       core.endGroup();
-    } else if (dispatchHandlerWorkflow && dispatchHandlerClientPayloadData) {
+    } else if (dispatchHandlerWorkflow && dispatchHandlerRef && dispatchHandlerClientPayloadData) {
       core.startGroup('Dispatch Handler Feature - Dispatch Workflow');
       const data: ClientPayloadData = JSON.parse(dispatchHandlerClientPayloadData);
       await handleWorkflowDispatch(
@@ -98,7 +99,8 @@ async function run() {
         dispatchHandlerOwner,
         dispatchHandlerRepo,
         data,
-        dispatchHandlerWorkflow
+        dispatchHandlerWorkflow,
+        dispatchHandlerRef
       );
       core.endGroup();
     } else if (dispatchHandlerClientPayloadData) {
