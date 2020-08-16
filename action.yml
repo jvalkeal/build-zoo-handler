@@ -60,6 +60,9 @@ inputs:
   dispatch-handler-client-payload-data:
     description: 'Action spesific payload data'
     required: false
+  dispatch-handler-workflow:
+    description: 'Workflow id workflow file name'
+    required: false
   dispatch-handler-max:
     description: 'Maximum dispatch round trips, defaults to "10"'
     required: false

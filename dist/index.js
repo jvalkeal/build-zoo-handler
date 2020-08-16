@@ -3548,7 +3548,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getHandlerConfigsFromJson = exports.extractContextProperties = exports.sendRepositoryDispatch = exports.handleRepositoryDispatch = exports.handle = void 0;
+exports.getHandlerConfigsFromJson = exports.extractContextProperties = exports.sendWorkflowDispatch = exports.handleWorkflowDispatch = exports.sendRepositoryDispatch = exports.handleRepositoryDispatch = exports.handle = void 0;
 const core = __importStar(__webpack_require__(470));
 const github = __importStar(__webpack_require__(469));
 const jexl_1 = __importDefault(__webpack_require__(325));
@@ -3667,6 +3667,32 @@ function sendRepositoryDispatch(token, owner, repo, eventType, clientPayload) {
     });
 }
 exports.sendRepositoryDispatch = sendRepositoryDispatch;
+function handleWorkflowDispatch(token, owner, repo, eventType, clientPayloadData, workflow) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const context = getCurrentContext();
+        core.info(`Current zoo context:\n ${util_1.inspect(context, true, 10)}`);
+        core.info('Prepare to send workflow dispatch');
+        core.debug(`github context: ${util_1.inspect(github.context, true, 10)}`);
+        let inputs = {};
+        yield sendWorkflowDispatch(token, owner, repo, workflow, '', inputs);
+        core.info('Workflow dispatch sent successfully');
+    });
+}
+exports.handleWorkflowDispatch = handleWorkflowDispatch;
+function sendWorkflowDispatch(token, owner, repo, workflow, ref, inputs) {
+    return __awaiter(this, void 0, void 0, function* () {
+        core.debug(`Sending workflow dispatch ${owner} ${repo} ${workflow} ${ref}`);
+        const octokit = github.getOctokit(token);
+        yield octokit.request('POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches', {
+            owner: owner,
+            repo: repo,
+            workflow_id: workflow,
+            ref: ref,
+            inputs: inputs
+        });
+    });
+}
+exports.sendWorkflowDispatch = sendWorkflowDispatch;
 function extractContextProperties() {
     return __awaiter(this, void 0, void 0, function* () {
         let count = 0;
@@ -3718,6 +3744,7 @@ function getCurrentData() {
 var HandlerConfigAction;
 (function (HandlerConfigAction) {
     HandlerConfigAction["repository_dispatch"] = "repository_dispatch";
+    HandlerConfigAction["workflow_dispatch"] = "workflow_dispatch";
     HandlerConfigAction["fail"] = "fail";
 })(HandlerConfigAction || (HandlerConfigAction = {}));
 function getHandlerConfigsFromJson(json) {
@@ -11579,13 +11606,20 @@ function run() {
             const dispatchHandlerConfig = inputNotRequired('dispatch-handler-config');
             const dispatchHandlerMax = Number(inputNotRequired('dispatch-handler-max') || '10');
             const dispatchHandlerClientPayloadData = inputNotRequired('dispatch-handler-client-payload-data');
+            const dispatchHandlerWorkflow = inputNotRequired('dispatch-handler-workflow');
             if (dispatchHandlerConfig) {
                 core.startGroup('Dispatch Handler Feature - Handle');
                 yield dispatch_handler_1.handle(dispatchHandlerToken, dispatchHandlerConfig, dispatchHandlerMax);
                 core.endGroup();
             }
+            else if (dispatchHandlerWorkflow && dispatchHandlerClientPayloadData) {
+                core.startGroup('Dispatch Handler Feature - Dispatch Workflow');
+                const data = JSON.parse(dispatchHandlerClientPayloadData);
+                yield dispatch_handler_1.handleWorkflowDispatch(dispatchHandlerToken, dispatchHandlerOwner, dispatchHandlerRepo, dispatchHandlerEventType, data, dispatchHandlerWorkflow);
+                core.endGroup();
+            }
             else if (dispatchHandlerClientPayloadData) {
-                core.startGroup('Dispatch Handler Feature - Dispatch');
+                core.startGroup('Dispatch Handler Feature - Dispatch Repository');
                 const data = JSON.parse(dispatchHandlerClientPayloadData);
                 yield dispatch_handler_1.handleRepositoryDispatch(dispatchHandlerToken, dispatchHandlerOwner, dispatchHandlerRepo, dispatchHandlerEventType, data);
                 core.endGroup();

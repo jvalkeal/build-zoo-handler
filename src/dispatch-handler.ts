@@ -136,6 +136,45 @@ export async function sendRepositoryDispatch(
   });
 }
 
+export async function handleWorkflowDispatch(
+  token: string,
+  owner: string,
+  repo: string,
+  eventType: string,
+  clientPayloadData: ClientPayloadData,
+  workflow: string
+) {
+
+  const context = getCurrentContext();
+  core.info(`Current zoo context:\n ${inspect(context, true, 10)}`);
+  core.info('Prepare to send workflow dispatch');
+  core.debug(`github context: ${inspect(github.context, true, 10)}`);
+
+  let inputs: {[key: string]: string} = {};
+
+  await sendWorkflowDispatch(token, owner, repo, workflow, '', inputs);
+  core.info('Workflow dispatch sent successfully');
+}
+
+export async function sendWorkflowDispatch(
+  token: string,
+  owner: string,
+  repo: string,
+  workflow: string,
+  ref: string,
+  inputs: {[key: string]: string}
+) {
+  core.debug(`Sending workflow dispatch ${owner} ${repo} ${workflow} ${ref}`);
+  const octokit = github.getOctokit(token);
+  await octokit.request('POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches', {
+    owner: owner,
+    repo: repo,
+    workflow_id: workflow,
+    ref: ref,
+    inputs: inputs
+  })
+}
+
 export async function extractContextProperties(): Promise<void> {
   let count = 0;
   try {
@@ -210,6 +249,7 @@ export interface ExpressionContext {
 
 enum HandlerConfigAction {
   repository_dispatch = 'repository_dispatch',
+  workflow_dispatch = 'workflow_dispatch',
   fail = 'fail'
 }
 
@@ -217,6 +257,13 @@ interface HandlerConfigRepositoryDispatch {
   owner: string;
   repo: string;
   event_type: string;
+}
+
+interface HandlerConfigWorkflowDispatch {
+  owner: string;
+  repo: string;
+  ref: string;
+  workflow: string;
 }
 
 interface HandlerConfigFail {
