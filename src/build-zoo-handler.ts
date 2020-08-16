@@ -97,7 +97,6 @@ async function run() {
         dispatchHandlerToken,
         dispatchHandlerOwner,
         dispatchHandlerRepo,
-        dispatchHandlerEventType,
         data,
         dispatchHandlerWorkflow
       );

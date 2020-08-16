@@ -6,8 +6,11 @@ import {inspect} from 'util';
 export async function handle(token: string, config: string, max: number): Promise<void> {
   core.debug(`github context: ${inspect(github.context, true, 10)}`);
 
-  const context = getCurrentContext();
-  const data = getCurrentData();
+  const clientPayload = getCurrentClientPayload();
+  const context = clientPayload.build_zoo_handler_context;
+  const data = clientPayload.build_zoo_handler_data;
+  // const context = getCurrentContext();
+  // const data = getCurrentData();
   core.info(`Current zoo context:\n ${inspect(context, true, 10)}`);
   core.debug(`data: ${inspect(data)}`);
 
@@ -55,6 +58,17 @@ export async function handle(token: string, config: string, max: number): Promis
         matchConfig.repository_dispatch.event_type,
         p
       );
+    } else if (matchConfig.action === HandlerConfigAction.workflow_dispatch && matchConfig.workflow_dispatch) {
+      await sendWorkflowDispatch(
+        token,
+        matchConfig.workflow_dispatch.owner,
+        matchConfig.workflow_dispatch.repo,
+        matchConfig.workflow_dispatch.workflow,
+        matchConfig.workflow_dispatch.ref,
+        {
+          'build-zoo-handler': new Buffer(JSON.stringify(p)).toString('base64')
+        }
+      );
     } else if (matchConfig.action === HandlerConfigAction.fail) {
       let message = matchConfig?.fail?.message || 'Unknown error';
       if (data.message) {
@@ -97,7 +111,8 @@ export async function handleRepositoryDispatch(
   for (const key in props) {
     clientPayloadData.properties[key] = props[key];
   }
-  const context = getCurrentContext();
+  // const context = getCurrentContext();
+  const context = getCurrentClientPayload().build_zoo_handler_context;
   core.info(`Current zoo context:\n ${inspect(context, true, 10)}`);
   core.info('Prepare to send repository dispatch');
   core.debug(`github context: ${inspect(github.context, true, 10)}`);
@@ -140,19 +155,24 @@ export async function handleWorkflowDispatch(
   token: string,
   owner: string,
   repo: string,
-  eventType: string,
   clientPayloadData: ClientPayloadData,
   workflow: string
 ) {
 
-  const context = getCurrentContext();
+  // const context = getCurrentContext();
+  const context = getCurrentClientPayload().build_zoo_handler_context;
   core.info(`Current zoo context:\n ${inspect(context, true, 10)}`);
   core.info('Prepare to send workflow dispatch');
   core.debug(`github context: ${inspect(github.context, true, 10)}`);
 
   let inputs: {[key: string]: string} = {};
+  const clientPayload: ClientPayload = {
+    build_zoo_handler_context: context,
+    build_zoo_handler_data: clientPayloadData
+  };
+  inputs['build-zoo-handler'] = new Buffer(JSON.stringify(clientPayload)).toString('base64')
 
-  await sendWorkflowDispatch(token, owner, repo, workflow, '', inputs);
+  await sendWorkflowDispatch(token, owner, repo, workflow, 'master', inputs);
   core.info('Workflow dispatch sent successfully');
 }
 
@@ -206,20 +226,42 @@ function readContextProperties(): {[key: string]: string} {
   return props;
 }
 
-function getCurrentContext(): ClientPayloadContext {
-  if (github.context.payload.client_payload && github.context.payload.client_payload.build_zoo_handler_context) {
-    return github.context.payload.client_payload.build_zoo_handler_context;
-  } else {
-    return {handler_count: 0, properties: {}};
-  }
-}
+// function getCurrentContext(): ClientPayloadContext {
+//   if (github.context.payload.client_payload && github.context.payload.client_payload.build_zoo_handler_context) {
+//     return github.context.payload.client_payload.build_zoo_handler_context;
+//   } else {
+//     return {handler_count: 0, properties: {}};
+//   }
+// }
 
-function getCurrentData(): ClientPayloadData {
-  if (github.context.payload.client_payload && github.context.payload.client_payload.build_zoo_handler_data) {
-    return github.context.payload.client_payload.build_zoo_handler_data;
-  } else {
-    return {};
+// function getCurrentData(): ClientPayloadData {
+//   if (github.context.payload.client_payload && github.context.payload.client_payload.build_zoo_handler_data) {
+//     return github.context.payload.client_payload.build_zoo_handler_data;
+//   } else {
+//     return {};
+//   }
+// }
+
+function getCurrentClientPayload(): ClientPayload {
+
+  if (github.context.eventName === 'workflow_dispatch') {
+    const zooInput: string = github.context.payload.inputs['build-zoo-handler'];
+    if (zooInput) {
+      const payloadJson = new Buffer(zooInput, 'base64').toString('ascii');
+      const clientPayload = JSON.parse(payloadJson);
+      return clientPayload;
+    }
+  } else if (github.context.eventName === 'repository_dispatch') {
+    return github.context.payload.client_payload;
   }
+
+  return {
+    build_zoo_handler_context: {
+      handler_count: 0,
+      properties: {}
+    },
+    build_zoo_handler_data: {}
+  };
 }
 
 export interface ClientPayloadContext {
@@ -274,6 +316,7 @@ interface HandlerConfig {
   if: string;
   action: HandlerConfigAction;
   repository_dispatch?: HandlerConfigRepositoryDispatch;
+  workflow_dispatch?: HandlerConfigWorkflowDispatch;
   fail?: HandlerConfigFail;
 }
 
