@@ -3681,6 +3681,19 @@ function sendRepositoryDispatch(token, owner, repo, eventType, clientPayload) {
 exports.sendRepositoryDispatch = sendRepositoryDispatch;
 function handleWorkflowDispatch(token, owner, repo, clientPayloadData, workflow) {
     return __awaiter(this, void 0, void 0, function* () {
+        if (clientPayloadData.owner === undefined && github.context.payload.repository) {
+            clientPayloadData.owner = github.context.payload.repository.owner.login;
+        }
+        if (clientPayloadData.repo === undefined && github.context.payload.repository) {
+            clientPayloadData.repo = github.context.payload.repository.name;
+        }
+        if (clientPayloadData.properties === undefined) {
+            clientPayloadData.properties = {};
+        }
+        const props = readContextProperties();
+        for (const key in props) {
+            clientPayloadData.properties[key] = props[key];
+        }
         // const context = getCurrentContext();
         const context = getCurrentClientPayload().build_zoo_handler_context;
         core.info(`Current zoo context:\n ${util_1.inspect(context, true, 10)}`);
