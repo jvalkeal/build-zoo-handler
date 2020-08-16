@@ -75,6 +75,8 @@ export async function handle(token: string, config: string, max: number): Promis
         message = message.concat('; ', data.message);
       }
       throw new Error(message);
+    } else {
+      throw new Error('Found config but no work to do');
     }
   } else {
     core.info('Nothing to do, bye bye');

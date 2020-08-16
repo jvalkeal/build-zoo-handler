@@ -3611,6 +3611,9 @@ function handle(token, config, max) {
                 }
                 throw new Error(message);
             }
+            else {
+                throw new Error('Found config but no work to do');
+            }
         }
         else {
             core.info('Nothing to do, bye bye');
