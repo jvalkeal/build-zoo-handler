@@ -201,7 +201,7 @@ export async function sendWorkflowDispatch(
   ref: string,
   inputs: {[key: string]: string}
 ) {
-  core.debug(`Sending workflow dispatch ${owner} ${repo} ${workflow} ${ref}`);
+  core.debug(`Sending workflow dispatch ${owner} ${repo} ${workflow} ${ref} ${inspect(inputs, true, 10)}`);
   const octokit = github.getOctokit(token);
   await octokit.request('POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches', {
     owner: owner,

@@ -3712,7 +3712,7 @@ function handleWorkflowDispatch(token, owner, repo, clientPayloadData, workflow)
 exports.handleWorkflowDispatch = handleWorkflowDispatch;
 function sendWorkflowDispatch(token, owner, repo, workflow, ref, inputs) {
     return __awaiter(this, void 0, void 0, function* () {
-        core.debug(`Sending workflow dispatch ${owner} ${repo} ${workflow} ${ref}`);
+        core.debug(`Sending workflow dispatch ${owner} ${repo} ${workflow} ${ref} ${util_1.inspect(inputs, true, 10)}`);
         const octokit = github.getOctokit(token);
         yield octokit.request('POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches', {
             owner: owner,
