@@ -6,7 +6,11 @@ import {tagRelease} from './tag-release';
 import {commitChanges} from './commit-changes';
 import {getPackCli} from './pack';
 import {
-  handle, handleRepositoryDispatch, handleWorkflowDispatch, ClientPayloadData, extractContextProperties
+  handle,
+  handleRepositoryDispatch,
+  handleWorkflowDispatch,
+  ClientPayloadData,
+  extractContextProperties
 } from './dispatch-handler';
 import {splitStringToArray} from './utils';
 

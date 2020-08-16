@@ -3560,8 +3560,6 @@ function handle(token, config, max) {
         const clientPayload = getCurrentClientPayload();
         const context = clientPayload.build_zoo_handler_context;
         const data = clientPayload.build_zoo_handler_data;
-        // const context = getCurrentContext();
-        // const data = getCurrentData();
         core.info(`Current zoo context:\n ${util_1.inspect(context, true, 10)}`);
         core.debug(`data: ${util_1.inspect(data)}`);
         if (context.handler_count && context.handler_count > max) {
@@ -3648,7 +3646,6 @@ function handleRepositoryDispatch(token, owner, repo, eventType, clientPayloadDa
         for (const key in props) {
             clientPayloadData.properties[key] = props[key];
         }
-        // const context = getCurrentContext();
         const context = getCurrentClientPayload().build_zoo_handler_context;
         core.info(`Current zoo context:\n ${util_1.inspect(context, true, 10)}`);
         core.info('Prepare to send repository dispatch');
@@ -3694,7 +3691,6 @@ function handleWorkflowDispatch(token, owner, repo, clientPayloadData, workflow,
         for (const key in props) {
             clientPayloadData.properties[key] = props[key];
         }
-        // const context = getCurrentContext();
         const context = getCurrentClientPayload().build_zoo_handler_context;
         core.info(`Current zoo context:\n ${util_1.inspect(context, true, 10)}`);
         core.info('Prepare to send workflow dispatch');
@@ -3756,20 +3752,6 @@ function readContextProperties() {
     });
     return props;
 }
-// function getCurrentContext(): ClientPayloadContext {
-//   if (github.context.payload.client_payload && github.context.payload.client_payload.build_zoo_handler_context) {
-//     return github.context.payload.client_payload.build_zoo_handler_context;
-//   } else {
-//     return {handler_count: 0, properties: {}};
-//   }
-// }
-// function getCurrentData(): ClientPayloadData {
-//   if (github.context.payload.client_payload && github.context.payload.client_payload.build_zoo_handler_data) {
-//     return github.context.payload.client_payload.build_zoo_handler_data;
-//   } else {
-//     return {};
-//   }
-// }
 function getCurrentClientPayload() {
     if (github.context.eventName === 'workflow_dispatch') {
         const zooInput = github.context.payload.inputs['build-zoo-handler'];
