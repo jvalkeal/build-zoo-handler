@@ -224,6 +224,12 @@ export async function extractContextProperties(): Promise<void> {
   core.info(`Extracted ${count} properties`);
 }
 
+function getHandlerConfigsFromJson(json: string): HandlerConfig[] {
+  const jsonConfig: HandlerConfig[] = JSON.parse(json);
+  core.debug(`JSON config: ${inspect(jsonConfig)}`);
+  return jsonConfig;
+}
+
 const TOKEN_PREFIX: RegExp = /^BUILD_ZOO_HANDLER.*$/;
 
 function readContextProperties(): {[key: string]: string} {
@@ -239,7 +245,7 @@ function readContextProperties(): {[key: string]: string} {
 }
 
 function getCurrentClientPayload(): ClientPayload {
-  if (github.context.eventName === 'workflow_dispatch') {
+  if (github.context.eventName === 'workflow_dispatch' && github.context.payload.inputs) {
     const zooInput: string = github.context.payload.inputs['build-zoo-handler'];
     if (zooInput) {
       const payloadJson = new Buffer(zooInput, 'base64').toString('ascii');
@@ -313,10 +319,4 @@ interface HandlerConfig {
   repository_dispatch?: HandlerConfigRepositoryDispatch;
   workflow_dispatch?: HandlerConfigWorkflowDispatch;
   fail?: HandlerConfigFail;
-}
-
-export function getHandlerConfigsFromJson(json: string): HandlerConfig[] {
-  const jsonConfig: HandlerConfig[] = JSON.parse(json);
-  core.debug(`JSON config: ${inspect(jsonConfig)}`);
-  return jsonConfig;
 }

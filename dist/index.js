@@ -3548,7 +3548,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getHandlerConfigsFromJson = exports.extractContextProperties = exports.sendWorkflowDispatch = exports.handleWorkflowDispatch = exports.sendRepositoryDispatch = exports.handleRepositoryDispatch = exports.handle = void 0;
+exports.extractContextProperties = exports.sendWorkflowDispatch = exports.handleWorkflowDispatch = exports.sendRepositoryDispatch = exports.handleRepositoryDispatch = exports.handle = void 0;
 const core = __importStar(__webpack_require__(470));
 const github = __importStar(__webpack_require__(469));
 const jexl_1 = __importDefault(__webpack_require__(325));
@@ -3740,6 +3740,11 @@ function extractContextProperties() {
     });
 }
 exports.extractContextProperties = extractContextProperties;
+function getHandlerConfigsFromJson(json) {
+    const jsonConfig = JSON.parse(json);
+    core.debug(`JSON config: ${util_1.inspect(jsonConfig)}`);
+    return jsonConfig;
+}
 const TOKEN_PREFIX = /^BUILD_ZOO_HANDLER.*$/;
 function readContextProperties() {
     const props = {};
@@ -3753,7 +3758,7 @@ function readContextProperties() {
     return props;
 }
 function getCurrentClientPayload() {
-    if (github.context.eventName === 'workflow_dispatch') {
+    if (github.context.eventName === 'workflow_dispatch' && github.context.payload.inputs) {
         const zooInput = github.context.payload.inputs['build-zoo-handler'];
         if (zooInput) {
             const payloadJson = new Buffer(zooInput, 'base64').toString('ascii');
@@ -3778,12 +3783,6 @@ var HandlerConfigAction;
     HandlerConfigAction["workflow_dispatch"] = "workflow_dispatch";
     HandlerConfigAction["fail"] = "fail";
 })(HandlerConfigAction || (HandlerConfigAction = {}));
-function getHandlerConfigsFromJson(json) {
-    const jsonConfig = JSON.parse(json);
-    core.debug(`JSON config: ${util_1.inspect(jsonConfig)}`);
-    return jsonConfig;
-}
-exports.getHandlerConfigsFromJson = getHandlerConfigsFromJson;
 
 
 /***/ }),
