@@ -6,8 +6,9 @@ import {inspect} from 'util';
 export async function handle(token: string, config: string, max: number): Promise<void> {
   core.debug(`github context: ${inspect(github.context, true, 10)}`);
 
-  const context = getCurrentContext();
-  const data = getCurrentData();
+  const clientPayload = getCurrentClientPayload();
+  const context = clientPayload.build_zoo_handler_context;
+  const data = clientPayload.build_zoo_handler_data;
   core.info(`Current zoo context:\n ${inspect(context, true, 10)}`);
   core.debug(`data: ${inspect(data)}`);
 
@@ -55,12 +56,25 @@ export async function handle(token: string, config: string, max: number): Promis
         matchConfig.repository_dispatch.event_type,
         p
       );
+    } else if (matchConfig.action === HandlerConfigAction.workflow_dispatch && matchConfig.workflow_dispatch) {
+      await sendWorkflowDispatch(
+        token,
+        matchConfig.workflow_dispatch.owner,
+        matchConfig.workflow_dispatch.repo,
+        matchConfig.workflow_dispatch.workflow,
+        matchConfig.workflow_dispatch.ref,
+        {
+          'build-zoo-handler': new Buffer(JSON.stringify(p)).toString('base64')
+        }
+      );
     } else if (matchConfig.action === HandlerConfigAction.fail) {
       let message = matchConfig?.fail?.message || 'Unknown error';
       if (data.message) {
         message = message.concat('; ', data.message);
       }
       throw new Error(message);
+    } else {
+      throw new Error('Found config but no work to do');
     }
   } else {
     core.info('Nothing to do, bye bye');
@@ -97,7 +111,7 @@ export async function handleRepositoryDispatch(
   for (const key in props) {
     clientPayloadData.properties[key] = props[key];
   }
-  const context = getCurrentContext();
+  const context = getCurrentClientPayload().build_zoo_handler_context;
   core.info(`Current zoo context:\n ${inspect(context, true, 10)}`);
   core.info('Prepare to send repository dispatch');
   core.debug(`github context: ${inspect(github.context, true, 10)}`);
@@ -136,6 +150,63 @@ export async function sendRepositoryDispatch(
   });
 }
 
+export async function handleWorkflowDispatch(
+  token: string,
+  owner: string,
+  repo: string,
+  clientPayloadData: ClientPayloadData,
+  workflow: string,
+  ref: string
+) {
+  if (clientPayloadData.owner === undefined && github.context.payload.repository) {
+    clientPayloadData.owner = github.context.payload.repository.owner.login;
+  }
+  if (clientPayloadData.repo === undefined && github.context.payload.repository) {
+    clientPayloadData.repo = github.context.payload.repository.name;
+  }
+  if (clientPayloadData.properties === undefined) {
+    clientPayloadData.properties = {};
+  }
+  const props = readContextProperties();
+  for (const key in props) {
+    clientPayloadData.properties[key] = props[key];
+  }
+
+  const context = getCurrentClientPayload().build_zoo_handler_context;
+  core.info(`Current zoo context:\n ${inspect(context, true, 10)}`);
+  core.info('Prepare to send workflow dispatch');
+  core.debug(`github context: ${inspect(github.context, true, 10)}`);
+
+  let inputs: {[key: string]: string} = {};
+  const clientPayload: ClientPayload = {
+    build_zoo_handler_context: context,
+    build_zoo_handler_data: clientPayloadData
+  };
+  inputs['build-zoo-handler'] = new Buffer(JSON.stringify(clientPayload)).toString('base64');
+
+  await sendWorkflowDispatch(token, owner, repo, workflow, ref, inputs);
+  core.info('Workflow dispatch sent successfully');
+}
+
+export async function sendWorkflowDispatch(
+  token: string,
+  owner: string,
+  repo: string,
+  workflow: string,
+  ref: string,
+  inputs: {[key: string]: string}
+) {
+  core.debug(`Sending workflow dispatch ${owner} ${repo} ${workflow} ${ref} ${inspect(inputs, true, 10)}`);
+  const octokit = github.getOctokit(token);
+  await octokit.request('POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches', {
+    owner: owner,
+    repo: repo,
+    workflow_id: workflow,
+    ref: ref,
+    inputs: inputs
+  });
+}
+
 export async function extractContextProperties(): Promise<void> {
   let count = 0;
   try {
@@ -153,6 +224,12 @@ export async function extractContextProperties(): Promise<void> {
   core.info(`Extracted ${count} properties`);
 }
 
+function getHandlerConfigsFromJson(json: string): HandlerConfig[] {
+  const jsonConfig: HandlerConfig[] = JSON.parse(json);
+  core.debug(`JSON config: ${inspect(jsonConfig)}`);
+  return jsonConfig;
+}
+
 const TOKEN_PREFIX: RegExp = /^BUILD_ZOO_HANDLER.*$/;
 
 function readContextProperties(): {[key: string]: string} {
@@ -167,20 +244,25 @@ function readContextProperties(): {[key: string]: string} {
   return props;
 }
 
-function getCurrentContext(): ClientPayloadContext {
-  if (github.context.payload.client_payload && github.context.payload.client_payload.build_zoo_handler_context) {
-    return github.context.payload.client_payload.build_zoo_handler_context;
-  } else {
-    return {handler_count: 0, properties: {}};
+function getCurrentClientPayload(): ClientPayload {
+  if (github.context.eventName === 'workflow_dispatch' && github.context.payload.inputs) {
+    const zooInput: string = github.context.payload.inputs['build-zoo-handler'];
+    if (zooInput) {
+      const payloadJson = new Buffer(zooInput, 'base64').toString('ascii');
+      const clientPayload = JSON.parse(payloadJson);
+      return clientPayload;
+    }
+  } else if (github.context.eventName === 'repository_dispatch') {
+    return github.context.payload.client_payload;
   }
-}
 
-function getCurrentData(): ClientPayloadData {
-  if (github.context.payload.client_payload && github.context.payload.client_payload.build_zoo_handler_data) {
-    return github.context.payload.client_payload.build_zoo_handler_data;
-  } else {
-    return {};
-  }
+  return {
+    build_zoo_handler_context: {
+      handler_count: 0,
+      properties: {}
+    },
+    build_zoo_handler_data: {}
+  };
 }
 
 export interface ClientPayloadContext {
@@ -210,6 +292,7 @@ export interface ExpressionContext {
 
 enum HandlerConfigAction {
   repository_dispatch = 'repository_dispatch',
+  workflow_dispatch = 'workflow_dispatch',
   fail = 'fail'
 }
 
@@ -217,6 +300,13 @@ interface HandlerConfigRepositoryDispatch {
   owner: string;
   repo: string;
   event_type: string;
+}
+
+interface HandlerConfigWorkflowDispatch {
+  owner: string;
+  repo: string;
+  ref: string;
+  workflow: string;
 }
 
 interface HandlerConfigFail {
@@ -227,11 +317,6 @@ interface HandlerConfig {
   if: string;
   action: HandlerConfigAction;
   repository_dispatch?: HandlerConfigRepositoryDispatch;
+  workflow_dispatch?: HandlerConfigWorkflowDispatch;
   fail?: HandlerConfigFail;
-}
-
-export function getHandlerConfigsFromJson(json: string): HandlerConfig[] {
-  const jsonConfig: HandlerConfig[] = JSON.parse(json);
-  core.debug(`JSON config: ${inspect(jsonConfig)}`);
-  return jsonConfig;
 }

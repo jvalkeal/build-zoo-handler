@@ -5,7 +5,13 @@ import {checkEnv} from './ensure-env';
 import {tagRelease} from './tag-release';
 import {commitChanges} from './commit-changes';
 import {getPackCli} from './pack';
-import {handle, handleRepositoryDispatch, ClientPayloadData, extractContextProperties} from './dispatch-handler';
+import {
+  handle,
+  handleRepositoryDispatch,
+  handleWorkflowDispatch,
+  ClientPayloadData,
+  extractContextProperties
+} from './dispatch-handler';
 import {splitStringToArray} from './utils';
 
 const DEFAULT_USERNAME = 'github-actions[bot]';
@@ -82,13 +88,27 @@ async function run() {
     const dispatchHandlerConfig = inputNotRequired('dispatch-handler-config');
     const dispatchHandlerMax = Number(inputNotRequired('dispatch-handler-max') || '10');
     const dispatchHandlerClientPayloadData = inputNotRequired('dispatch-handler-client-payload-data');
+    const dispatchHandlerWorkflow = inputNotRequired('dispatch-handler-workflow');
+    const dispatchHandlerRef = inputNotRequired('dispatch-handler-ref');
 
     if (dispatchHandlerConfig) {
       core.startGroup('Dispatch Handler Feature - Handle');
       await handle(dispatchHandlerToken, dispatchHandlerConfig, dispatchHandlerMax);
       core.endGroup();
+    } else if (dispatchHandlerWorkflow && dispatchHandlerRef && dispatchHandlerClientPayloadData) {
+      core.startGroup('Dispatch Handler Feature - Dispatch Workflow');
+      const data: ClientPayloadData = JSON.parse(dispatchHandlerClientPayloadData);
+      await handleWorkflowDispatch(
+        dispatchHandlerToken,
+        dispatchHandlerOwner,
+        dispatchHandlerRepo,
+        data,
+        dispatchHandlerWorkflow,
+        dispatchHandlerRef
+      );
+      core.endGroup();
     } else if (dispatchHandlerClientPayloadData) {
-      core.startGroup('Dispatch Handler Feature - Dispatch');
+      core.startGroup('Dispatch Handler Feature - Dispatch Repository');
       const data: ClientPayloadData = JSON.parse(dispatchHandlerClientPayloadData);
       await handleRepositoryDispatch(
         dispatchHandlerToken,
