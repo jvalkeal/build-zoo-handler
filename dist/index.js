@@ -3548,7 +3548,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getHandlerConfigsFromJson = exports.extractContextProperties = exports.sendRepositoryDispatch = exports.handleRepositoryDispatch = exports.handle = void 0;
+exports.extractContextProperties = exports.sendWorkflowDispatch = exports.handleWorkflowDispatch = exports.sendRepositoryDispatch = exports.handleRepositoryDispatch = exports.handle = void 0;
 const core = __importStar(__webpack_require__(470));
 const github = __importStar(__webpack_require__(469));
 const jexl_1 = __importDefault(__webpack_require__(325));
@@ -3557,8 +3557,9 @@ function handle(token, config, max) {
     var _a, _b;
     return __awaiter(this, void 0, void 0, function* () {
         core.debug(`github context: ${util_1.inspect(github.context, true, 10)}`);
-        const context = getCurrentContext();
-        const data = getCurrentData();
+        const clientPayload = getCurrentClientPayload();
+        const context = clientPayload.build_zoo_handler_context;
+        const data = clientPayload.build_zoo_handler_data;
         core.info(`Current zoo context:\n ${util_1.inspect(context, true, 10)}`);
         core.debug(`data: ${util_1.inspect(data)}`);
         if (context.handler_count && context.handler_count > max) {
@@ -3596,12 +3597,20 @@ function handle(token, config, max) {
             if (matchConfig.action === HandlerConfigAction.repository_dispatch && matchConfig.repository_dispatch) {
                 yield sendRepositoryDispatch(token, (_a = matchConfig.repository_dispatch) === null || _a === void 0 ? void 0 : _a.owner, matchConfig.repository_dispatch.repo, matchConfig.repository_dispatch.event_type, p);
             }
+            else if (matchConfig.action === HandlerConfigAction.workflow_dispatch && matchConfig.workflow_dispatch) {
+                yield sendWorkflowDispatch(token, matchConfig.workflow_dispatch.owner, matchConfig.workflow_dispatch.repo, matchConfig.workflow_dispatch.workflow, matchConfig.workflow_dispatch.ref, {
+                    'build-zoo-handler': new Buffer(JSON.stringify(p)).toString('base64')
+                });
+            }
             else if (matchConfig.action === HandlerConfigAction.fail) {
                 let message = ((_b = matchConfig === null || matchConfig === void 0 ? void 0 : matchConfig.fail) === null || _b === void 0 ? void 0 : _b.message) || 'Unknown error';
                 if (data.message) {
                     message = message.concat('; ', data.message);
                 }
                 throw new Error(message);
+            }
+            else {
+                throw new Error('Found config but no work to do');
             }
         }
         else {
@@ -3637,7 +3646,7 @@ function handleRepositoryDispatch(token, owner, repo, eventType, clientPayloadDa
         for (const key in props) {
             clientPayloadData.properties[key] = props[key];
         }
-        const context = getCurrentContext();
+        const context = getCurrentClientPayload().build_zoo_handler_context;
         core.info(`Current zoo context:\n ${util_1.inspect(context, true, 10)}`);
         core.info('Prepare to send repository dispatch');
         core.debug(`github context: ${util_1.inspect(github.context, true, 10)}`);
@@ -3667,6 +3676,50 @@ function sendRepositoryDispatch(token, owner, repo, eventType, clientPayload) {
     });
 }
 exports.sendRepositoryDispatch = sendRepositoryDispatch;
+function handleWorkflowDispatch(token, owner, repo, clientPayloadData, workflow, ref) {
+    return __awaiter(this, void 0, void 0, function* () {
+        if (clientPayloadData.owner === undefined && github.context.payload.repository) {
+            clientPayloadData.owner = github.context.payload.repository.owner.login;
+        }
+        if (clientPayloadData.repo === undefined && github.context.payload.repository) {
+            clientPayloadData.repo = github.context.payload.repository.name;
+        }
+        if (clientPayloadData.properties === undefined) {
+            clientPayloadData.properties = {};
+        }
+        const props = readContextProperties();
+        for (const key in props) {
+            clientPayloadData.properties[key] = props[key];
+        }
+        const context = getCurrentClientPayload().build_zoo_handler_context;
+        core.info(`Current zoo context:\n ${util_1.inspect(context, true, 10)}`);
+        core.info('Prepare to send workflow dispatch');
+        core.debug(`github context: ${util_1.inspect(github.context, true, 10)}`);
+        let inputs = {};
+        const clientPayload = {
+            build_zoo_handler_context: context,
+            build_zoo_handler_data: clientPayloadData
+        };
+        inputs['build-zoo-handler'] = new Buffer(JSON.stringify(clientPayload)).toString('base64');
+        yield sendWorkflowDispatch(token, owner, repo, workflow, ref, inputs);
+        core.info('Workflow dispatch sent successfully');
+    });
+}
+exports.handleWorkflowDispatch = handleWorkflowDispatch;
+function sendWorkflowDispatch(token, owner, repo, workflow, ref, inputs) {
+    return __awaiter(this, void 0, void 0, function* () {
+        core.debug(`Sending workflow dispatch ${owner} ${repo} ${workflow} ${ref} ${util_1.inspect(inputs, true, 10)}`);
+        const octokit = github.getOctokit(token);
+        yield octokit.request('POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches', {
+            owner: owner,
+            repo: repo,
+            workflow_id: workflow,
+            ref: ref,
+            inputs: inputs
+        });
+    });
+}
+exports.sendWorkflowDispatch = sendWorkflowDispatch;
 function extractContextProperties() {
     return __awaiter(this, void 0, void 0, function* () {
         let count = 0;
@@ -3687,6 +3740,11 @@ function extractContextProperties() {
     });
 }
 exports.extractContextProperties = extractContextProperties;
+function getHandlerConfigsFromJson(json) {
+    const jsonConfig = JSON.parse(json);
+    core.debug(`JSON config: ${util_1.inspect(jsonConfig)}`);
+    return jsonConfig;
+}
 const TOKEN_PREFIX = /^BUILD_ZOO_HANDLER.*$/;
 function readContextProperties() {
     const props = {};
@@ -3699,33 +3757,32 @@ function readContextProperties() {
     });
     return props;
 }
-function getCurrentContext() {
-    if (github.context.payload.client_payload && github.context.payload.client_payload.build_zoo_handler_context) {
-        return github.context.payload.client_payload.build_zoo_handler_context;
+function getCurrentClientPayload() {
+    if (github.context.eventName === 'workflow_dispatch' && github.context.payload.inputs) {
+        const zooInput = github.context.payload.inputs['build-zoo-handler'];
+        if (zooInput) {
+            const payloadJson = new Buffer(zooInput, 'base64').toString('ascii');
+            const clientPayload = JSON.parse(payloadJson);
+            return clientPayload;
+        }
     }
-    else {
-        return { handler_count: 0, properties: {} };
+    else if (github.context.eventName === 'repository_dispatch') {
+        return github.context.payload.client_payload;
     }
-}
-function getCurrentData() {
-    if (github.context.payload.client_payload && github.context.payload.client_payload.build_zoo_handler_data) {
-        return github.context.payload.client_payload.build_zoo_handler_data;
-    }
-    else {
-        return {};
-    }
+    return {
+        build_zoo_handler_context: {
+            handler_count: 0,
+            properties: {}
+        },
+        build_zoo_handler_data: {}
+    };
 }
 var HandlerConfigAction;
 (function (HandlerConfigAction) {
     HandlerConfigAction["repository_dispatch"] = "repository_dispatch";
+    HandlerConfigAction["workflow_dispatch"] = "workflow_dispatch";
     HandlerConfigAction["fail"] = "fail";
 })(HandlerConfigAction || (HandlerConfigAction = {}));
-function getHandlerConfigsFromJson(json) {
-    const jsonConfig = JSON.parse(json);
-    core.debug(`JSON config: ${util_1.inspect(jsonConfig)}`);
-    return jsonConfig;
-}
-exports.getHandlerConfigsFromJson = getHandlerConfigsFromJson;
 
 
 /***/ }),
@@ -11579,13 +11636,21 @@ function run() {
             const dispatchHandlerConfig = inputNotRequired('dispatch-handler-config');
             const dispatchHandlerMax = Number(inputNotRequired('dispatch-handler-max') || '10');
             const dispatchHandlerClientPayloadData = inputNotRequired('dispatch-handler-client-payload-data');
+            const dispatchHandlerWorkflow = inputNotRequired('dispatch-handler-workflow');
+            const dispatchHandlerRef = inputNotRequired('dispatch-handler-ref');
             if (dispatchHandlerConfig) {
                 core.startGroup('Dispatch Handler Feature - Handle');
                 yield dispatch_handler_1.handle(dispatchHandlerToken, dispatchHandlerConfig, dispatchHandlerMax);
                 core.endGroup();
             }
+            else if (dispatchHandlerWorkflow && dispatchHandlerRef && dispatchHandlerClientPayloadData) {
+                core.startGroup('Dispatch Handler Feature - Dispatch Workflow');
+                const data = JSON.parse(dispatchHandlerClientPayloadData);
+                yield dispatch_handler_1.handleWorkflowDispatch(dispatchHandlerToken, dispatchHandlerOwner, dispatchHandlerRepo, data, dispatchHandlerWorkflow, dispatchHandlerRef);
+                core.endGroup();
+            }
             else if (dispatchHandlerClientPayloadData) {
-                core.startGroup('Dispatch Handler Feature - Dispatch');
+                core.startGroup('Dispatch Handler Feature - Dispatch Repository');
                 const data = JSON.parse(dispatchHandlerClientPayloadData);
                 yield dispatch_handler_1.handleRepositoryDispatch(dispatchHandlerToken, dispatchHandlerOwner, dispatchHandlerRepo, dispatchHandlerEventType, data);
                 core.endGroup();
