@@ -23,7 +23,8 @@ to make decision what to do next in a flow.
 
 Central consept of this feature is a _context_ which is kept alive as long
 as workflows are able to ping/pong message between each others. This _context_
-object is a simple reserved field in a `repository_dispatch` _client payload_.
+object is a simple reserved field in a `repository_dispatch` _client payload_
+or a required input in a `workflow_dispatch`.
 
 Controller itself will contribute a field `handler_count` as a number and every
 dispatched message either from controller or remove workflow will increment this
@@ -195,6 +196,7 @@ Type of a model is a list of object of _HandlerConfig_:
 ----
 enum HandlerConfigAction {
   repository_dispatch = 'repository_dispatch',
+  workflow_dispatch = 'workflow_dispatch',
   fail = 'fail'
 }
 
@@ -202,6 +204,13 @@ interface HandlerConfigRepositoryDispatch {
   owner: string;
   repo: string;
   event_type: string;
+}
+
+interface HandlerConfigWorkflowDispatch {
+  owner: string;
+  repo: string;
+  ref: string;
+  workflow: string;
 }
 
 interface HandlerConfigFail {
@@ -212,6 +221,7 @@ interface HandlerConfig {
   if: string;
   action: HandlerConfigAction;
   repository_dispatch?: HandlerConfigRepositoryDispatch;
+  workflow_dispatch?: HandlerConfigWorkflowDispatch;
   fail?: HandlerConfigFail;
 }
 ----
@@ -240,7 +250,7 @@ export interface ClientPayloadData {
 
 Here we have some useful samples how to use this dispatch feature.
 
-### Example with Two Repos
+### Two Repos via Repository Dispatch
 
 We'd have a three repositories under user `owner` named `repo1`, `repo2`
 and `repo3`. Firstly we can create a workflow on a repo `repo2` which
@@ -348,7 +358,7 @@ should be sent by checking source repository and event.
 
 [source,yaml]
 ----
-name: Zoo Controller
+name: Repo1 Zoo Controller
 
 on:
   workflow_dispatch:
@@ -380,7 +390,7 @@ jobs:
               "action": "repository_dispatch",
               "repository_dispatch": {
                 "owner": "owner",
-                "repo": "repo1",
+                "repo": "repo3",
                 "event_type": "build-zoo-handler-example"
               }
             },
@@ -399,6 +409,189 @@ to presence of _workflow dispatch_ few things happen after that.
 
 * With `if` expression we choose targer dispatch when initial in a context is true.
 * _repository dispatch_ gets send to `repo2`.
+* `repo2` calls home back to controller.
+* Now a controller can choose a case where `repo2` notified successful run
+  via `work-succeed` event.
+* Then controller goes ahead and dispatches into `repo3`.
+* `repo3` calls home and there is no more work to do.
+* Dispatch flow stops there.
+* In case remote workflow fails, fallback step runs and notifies controller
+  about its failure and then controller workflow fails as well together
+  with a `message` payload field passed in from a remote workflow.
+
+### Two Repos via Workflow Dispatch
+
+We'd have a three repositories under user `owner` named `repo1`, `repo2`
+and `repo3`. Firstly we can create a workflow on a repo `repo2` which
+gets fired with _workflow_dispatch_ with input field _build-zoo-handler_.
+With a configuration we need to define _token_ for authentication, repository
+with _owner_ and _repo_ and _event type_. Last a custom json where it's possible
+to define various parameters like _event_ itself. These are then processed
+in a controller workflow.
+
+[source,yaml]
+----
+name: Repo2 Work
+
+on:
+  workflow_dispatch:
+    inputs:
+      build-zoo-handler:
+        description: 'Build Zoo Handler Payload'
+        required: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Do Something
+      run: echo hi
+
+    # zoo notify success
+    - name: Notify Build Success Zoo Handler Controller
+      uses: jvalkeal/build-zoo-handler@main
+      with:
+        dispatch-handler-token: ${{ secrets.REPO_ACCESS_TOKEN }}
+        dispatch-handler-owner: owner
+        dispatch-handler-repo: repo1
+        dispatch-handler-workflow: controller-workflow-in-repo1.yml
+        dispatch-handler-ref: main
+        dispatch-handler-client-payload-data: >
+          {
+            "event": "work-succeed"
+          }
+
+    # zoo notify failed
+    - name: Notify Build Failure Zoo Handler Controller
+      if: ${{ failure() }}
+      uses: jvalkeal/build-zoo-handler@main
+      with:
+        dispatch-handler-token: ${{ secrets.REPO_ACCESS_TOKEN }}
+        dispatch-handler-owner: owner
+        dispatch-handler-repo: repo1
+        dispatch-handler-workflow: controller-workflow-in-repo1.yml
+        dispatch-handler-ref: main
+        dispatch-handler-client-payload-data: >
+          {
+            "event": "work-failed",
+            "message": "repo2 failed"
+          }
+----
+
+Same workflow for repo `repo3`.
+
+[source,yaml]
+----
+name: Repo3 Work
+
+on:
+  workflow_dispatch:
+    inputs:
+      build-zoo-handler:
+        description: 'Build Zoo Handler Payload'
+        required: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Do Something
+      run: echo hi
+
+    # zoo notify success
+    - name: Notify Build Success Zoo Handler Controller
+      uses: jvalkeal/build-zoo-handler@main
+      with:
+        dispatch-handler-token: ${{ secrets.REPO_ACCESS_TOKEN }}
+        dispatch-handler-owner: owner
+        dispatch-handler-repo: repo1
+        dispatch-handler-workflow: controller-workflow-in-repo1.yml
+        dispatch-handler-ref: main
+        dispatch-handler-client-payload-data: >
+          {
+            "event": "work-succeed"
+          }
+
+    # zoo notify failed
+    - name: Notify Build Failure Zoo Handler Controller
+      if: ${{ failure() }}
+      uses: jvalkeal/build-zoo-handler@main
+      with:
+        dispatch-handler-token: ${{ secrets.REPO_ACCESS_TOKEN }}
+        dispatch-handler-owner: owner
+        dispatch-handler-repo: repo1
+        dispatch-handler-workflow: controller-workflow-in-repo1.yml
+        dispatch-handler-ref: main
+        dispatch-handler-client-payload-data: >
+          {
+            "event": "work-failed",
+            "message": "repo3 failed"
+          }
+----
+
+Interesting and a real dispatch orchestration happens within a controller workflow.
+With a _handler config_ it's possible to define various cases where next dispatch
+should be sent by checking source repository and event.
+
+[source,yaml]
+----
+name: Repo1 Zoo Controller
+
+on:
+  workflow_dispatch:
+    inputs:
+      build-zoo-handler:
+        description: 'Build Zoo Handler Payload'
+        required: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Handle Zoo Control
+      uses: jvalkeal/build-zoo-handler@main
+      with:
+        dispatch-handler-token: ${{ secrets.REPO_ACCESS_TOKEN }}
+        dispatch-handler-config: >
+          [
+            {
+              "if": "initial == true",
+              "action": "workflow_dispatch",
+              "workflow_dispatch": {
+                "owner": "owner",
+                "repo": "repo2",
+                "ref": "main",
+                "workflow": "workflow-in-repo2.yml"
+              }
+            },
+            {
+              "if": "data.event == 'work-succeed' && data.repo == 'repo2' && data.owner == 'owner'",
+              "action": "workflow_dispatch",
+              "workflow_dispatch": {
+                "owner": "owner",
+                "repo": "repo3",
+                "ref": "main",
+                "workflow": "workflow-in-repo3.yml"
+              }
+            },
+            {
+              "if": "data.event == 'work-failed'",
+              "action": "fail",
+              "fail": {
+                "message": "hi, something went wrong"
+              }
+            }
+          ]
+----
+
+As this controller workflow can also get dispatched manually from GitHub UI due
+to presence of _workflow dispatch_ few things happen after that.
+
+* With `if` expression we choose targer dispatch when initial in a context is true.
+* _workflow dispatch_ gets send to `repo2`.
 * `repo2` calls home back to controller.
 * Now a controller can choose a case where `repo2` notified successful run
   via `work-succeed` event.
