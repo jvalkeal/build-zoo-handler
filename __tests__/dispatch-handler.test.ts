@@ -9,10 +9,13 @@ describe('workflow dispatch handler tests', () => {
   it('Repository Dispatch posts request', async () => {
     nock('https://api.github.com')
       .persist()
-      .post(
-        '/repos/owner/repo/dispatches',
-        '{"event_type":"eventType","client_payload":{"build_zoo_handler_context":{"handler_count":1,"properties":{}},"build_zoo_handler_data":{"properties":{}}}}'
-      )
+      .post('/repos/owner/repo/dispatches', body => {
+        return (
+          body.event_type === 'eventType' &&
+          body.client_payload.build_zoo_handler_context.handler_count === 1 &&
+          body.client_payload.build_zoo_handler_data.properties
+        );
+      })
       .reply(204);
     await dispatchHandler.handleRepositoryDispatch('token', 'owner', 'repo', 'eventType', {});
   }, 100000);
@@ -20,10 +23,9 @@ describe('workflow dispatch handler tests', () => {
   it('Workflow Dispatch posts request', async () => {
     nock('https://api.github.com')
       .persist()
-      .post(
-        '/repos/owner/repo/actions/workflows/workflow/dispatches',
-        '{"ref":"ref","inputs":{"build-zoo-handler":"eyJidWlsZF96b29faGFuZGxlcl9jb250ZXh0Ijp7ImhhbmRsZXJfY291bnQiOjAsInByb3BlcnRpZXMiOnt9fSwiYnVpbGRfem9vX2hhbmRsZXJfZGF0YSI6eyJwcm9wZXJ0aWVzIjp7fX19"}}'
-      )
+      .post('/repos/owner/repo/actions/workflows/workflow/dispatches', body => {
+        return body.ref === 'ref' && body.inputs['build-zoo-handler'];
+      })
       .reply(204);
     await dispatchHandler.handleWorkflowDispatch('token', 'owner', 'repo', {}, 'workflow', 'ref');
   }, 100000);
