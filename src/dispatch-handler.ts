@@ -273,12 +273,19 @@ function getCurrentClientPayload(): ClientPayload {
       handler_count: 0,
       controller_owner: github.context.repo.owner,
       controller_repo: github.context.repo.repo,
-      controller_workflow: github.context.workflow,
-      controller_ref: github.context.ref,
+      // controller_workflow: github.context.workflow,
+      controller_workflow: splitGetLast(github.context.payload.workflow),
+      // controller_ref: github.context.ref,
+      controller_ref: splitGetLast(github.context.ref),
       properties: {}
     },
     build_zoo_handler_data: {}
   };
+}
+
+function splitGetLast(str: string) {
+  const pieces = str.split(/[\s,]+/);
+  return pieces[pieces.length-1];
 }
 
 export interface ClientPayloadContext {
