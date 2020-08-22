@@ -3795,8 +3795,8 @@ function getCurrentClientPayload() {
     };
 }
 function splitGetLast(str) {
-    const pieces = str.split(/[\s,]+/);
-    return pieces[pieces.length - 1];
+    const rest = str.substring(0, str.lastIndexOf("/") + 1);
+    return str.substring(str.lastIndexOf("/") + 1, str.length);
 }
 var HandlerConfigAction;
 (function (HandlerConfigAction) {

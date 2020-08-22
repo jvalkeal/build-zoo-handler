@@ -284,8 +284,8 @@ function getCurrentClientPayload(): ClientPayload {
 }
 
 function splitGetLast(str: string) {
-  const pieces = str.split(/[\s,]+/);
-  return pieces[pieces.length-1];
+  const rest = str.substring(0, str.lastIndexOf("/") + 1);
+  return str.substring(str.lastIndexOf("/") + 1, str.length);
 }
 
 export interface ClientPayloadContext {
