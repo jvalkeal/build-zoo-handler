@@ -11647,7 +11647,7 @@ function run() {
             const dispatchHandlerToken = inputNotRequired('dispatch-handler-token');
             const dispatchHandlerOwner = inputNotRequired('dispatch-handler-owner');
             const dispatchHandlerRepo = inputNotRequired('dispatch-handler-repo');
-            const dispatchHandlerEventType = inputNotRequired('dispatch-handler-event-type') || 'build-zoo-handler';
+            const dispatchHandlerEventType = inputNotRequired('dispatch-handler-event-type');
             const dispatchHandlerConfig = inputNotRequired('dispatch-handler-config');
             const dispatchHandlerMax = Number(inputNotRequired('dispatch-handler-max') || '10');
             const dispatchHandlerClientPayloadData = inputNotRequired('dispatch-handler-client-payload-data');
