@@ -39,6 +39,10 @@ export async function handle(token: string, config: string, max: number): Promis
   const p: ClientPayload = {
     build_zoo_handler_context: {
       handler_count: context.handler_count + 1,
+      controller_owner: context.controller_owner,
+      controller_repo: context.controller_repo,
+      controller_workflow: context.controller_workflow,
+      controller_ref: context.controller_ref,
       properties: {...context.properties, ...data.properties}
     },
     build_zoo_handler_data: {}
@@ -152,11 +156,11 @@ export async function sendRepositoryDispatch(
 
 export async function handleWorkflowDispatch(
   token: string,
-  owner: string,
-  repo: string,
+  owner: string|undefined,
+  repo: string|undefined,
   clientPayloadData: ClientPayloadData,
-  workflow: string,
-  ref: string
+  workflow: string|undefined,
+  ref: string|undefined
 ) {
   if (clientPayloadData.owner === undefined && github.context.payload.repository) {
     clientPayloadData.owner = github.context.payload.repository.owner.login;
@@ -176,6 +180,14 @@ export async function handleWorkflowDispatch(
   core.info(`Current zoo context:\n ${inspect(context, true, 10)}`);
   core.info('Prepare to send workflow dispatch');
   core.debug(`github context: ${inspect(github.context, true, 10)}`);
+
+  owner = owner || context.controller_owner;
+  repo = repo || context.controller_repo;
+  workflow = workflow || context.controller_workflow;
+  ref = ref || context.controller_ref;
+  if (!owner || !repo || !workflow || !ref) {
+    throw new Error(`All these must be set, owner=${owner}, repo=${repo}, workflow=${workflow} and ref=${ref}`);
+  }
 
   let inputs: {[key: string]: string} = {};
   const clientPayload: ClientPayload = {
@@ -259,6 +271,10 @@ function getCurrentClientPayload(): ClientPayload {
   return {
     build_zoo_handler_context: {
       handler_count: 0,
+      controller_owner: github.context.repo.owner,
+      controller_repo: github.context.repo.repo,
+      controller_workflow: github.context.workflow,
+      controller_ref: github.context.ref,
       properties: {}
     },
     build_zoo_handler_data: {}
@@ -267,6 +283,10 @@ function getCurrentClientPayload(): ClientPayload {
 
 export interface ClientPayloadContext {
   handler_count: number;
+  controller_owner?: string;
+  controller_repo?: string;
+  controller_workflow?: string;
+  controller_ref?: string;
   properties: {[key: string]: string};
 }
 

@@ -3587,6 +3587,10 @@ function handle(token, config, max) {
         const p = {
             build_zoo_handler_context: {
                 handler_count: context.handler_count + 1,
+                controller_owner: context.controller_owner,
+                controller_repo: context.controller_repo,
+                controller_workflow: context.controller_workflow,
+                controller_ref: context.controller_ref,
                 properties: Object.assign(Object.assign({}, context.properties), data.properties)
             },
             build_zoo_handler_data: {}
@@ -3695,6 +3699,13 @@ function handleWorkflowDispatch(token, owner, repo, clientPayloadData, workflow,
         core.info(`Current zoo context:\n ${util_1.inspect(context, true, 10)}`);
         core.info('Prepare to send workflow dispatch');
         core.debug(`github context: ${util_1.inspect(github.context, true, 10)}`);
+        owner = owner || context.controller_owner;
+        repo = repo || context.controller_repo;
+        workflow = workflow || context.controller_workflow;
+        ref = ref || context.controller_ref;
+        if (!owner || !repo || !workflow || !ref) {
+            throw new Error(`All these must be set, owner=${owner}, repo=${repo}, workflow=${workflow} and ref=${ref}`);
+        }
         let inputs = {};
         const clientPayload = {
             build_zoo_handler_context: context,
@@ -3772,6 +3783,10 @@ function getCurrentClientPayload() {
     return {
         build_zoo_handler_context: {
             handler_count: 0,
+            controller_owner: github.context.repo.owner,
+            controller_repo: github.context.repo.repo,
+            controller_workflow: github.context.workflow,
+            controller_ref: github.context.ref,
             properties: {}
         },
         build_zoo_handler_data: {}
@@ -11638,23 +11653,53 @@ function run() {
             const dispatchHandlerClientPayloadData = inputNotRequired('dispatch-handler-client-payload-data');
             const dispatchHandlerWorkflow = inputNotRequired('dispatch-handler-workflow');
             const dispatchHandlerRef = inputNotRequired('dispatch-handler-ref');
-            if (dispatchHandlerConfig) {
-                core.startGroup('Dispatch Handler Feature - Handle');
-                yield dispatch_handler_1.handle(dispatchHandlerToken, dispatchHandlerConfig, dispatchHandlerMax);
-                core.endGroup();
+            if (dispatchHandlerToken) {
+                if (dispatchHandlerConfig) {
+                    core.startGroup('Dispatch Handler Feature - Handle');
+                    yield dispatch_handler_1.handle(dispatchHandlerToken, dispatchHandlerConfig, dispatchHandlerMax);
+                    core.endGroup();
+                }
+                else if (dispatchHandlerEventType) {
+                    core.startGroup('Dispatch Handler Feature - Dispatch Repository');
+                    const clientPayloadData = JSON.parse(dispatchHandlerClientPayloadData);
+                    yield dispatch_handler_1.handleRepositoryDispatch(dispatchHandlerToken, dispatchHandlerOwner, dispatchHandlerRepo, dispatchHandlerEventType, clientPayloadData);
+                    core.endGroup();
+                }
+                else {
+                    core.startGroup('Dispatch Handler Feature - Dispatch Workflow');
+                    const clientPayloadData = JSON.parse(dispatchHandlerClientPayloadData);
+                    yield dispatch_handler_1.handleWorkflowDispatch(dispatchHandlerToken, dispatchHandlerOwner, dispatchHandlerRepo, clientPayloadData, dispatchHandlerWorkflow, dispatchHandlerRef);
+                    core.endGroup();
+                }
             }
-            else if (dispatchHandlerWorkflow && dispatchHandlerRef && dispatchHandlerClientPayloadData) {
-                core.startGroup('Dispatch Handler Feature - Dispatch Workflow');
-                const data = JSON.parse(dispatchHandlerClientPayloadData);
-                yield dispatch_handler_1.handleWorkflowDispatch(dispatchHandlerToken, dispatchHandlerOwner, dispatchHandlerRepo, data, dispatchHandlerWorkflow, dispatchHandlerRef);
-                core.endGroup();
-            }
-            else if (dispatchHandlerClientPayloadData) {
-                core.startGroup('Dispatch Handler Feature - Dispatch Repository');
-                const data = JSON.parse(dispatchHandlerClientPayloadData);
-                yield dispatch_handler_1.handleRepositoryDispatch(dispatchHandlerToken, dispatchHandlerOwner, dispatchHandlerRepo, dispatchHandlerEventType, data);
-                core.endGroup();
-            }
+            // if (dispatchHandlerConfig) {
+            //   core.startGroup('Dispatch Handler Feature - Handle');
+            //   await handle(dispatchHandlerToken, dispatchHandlerConfig, dispatchHandlerMax);
+            //   core.endGroup();
+            // } else if (dispatchHandlerWorkflow && dispatchHandlerRef && dispatchHandlerClientPayloadData) {
+            //   core.startGroup('Dispatch Handler Feature - Dispatch Workflow');
+            //   const data: ClientPayloadData = JSON.parse(dispatchHandlerClientPayloadData);
+            //   await handleWorkflowDispatch(
+            //     dispatchHandlerToken,
+            //     dispatchHandlerOwner,
+            //     dispatchHandlerRepo,
+            //     data,
+            //     dispatchHandlerWorkflow,
+            //     dispatchHandlerRef
+            //   );
+            //   core.endGroup();
+            // } else if (dispatchHandlerClientPayloadData) {
+            //   core.startGroup('Dispatch Handler Feature - Dispatch Repository');
+            //   const data: ClientPayloadData = JSON.parse(dispatchHandlerClientPayloadData);
+            //   await handleRepositoryDispatch(
+            //     dispatchHandlerToken,
+            //     dispatchHandlerOwner,
+            //     dispatchHandlerRepo,
+            //     dispatchHandlerEventType,
+            //     data
+            //   );
+            //   core.endGroup();
+            // }
         }
         catch (error) {
             core.debug(util_1.inspect(error));

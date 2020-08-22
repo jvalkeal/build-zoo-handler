@@ -91,34 +91,65 @@ async function run() {
     const dispatchHandlerWorkflow = inputNotRequired('dispatch-handler-workflow');
     const dispatchHandlerRef = inputNotRequired('dispatch-handler-ref');
 
-    if (dispatchHandlerConfig) {
-      core.startGroup('Dispatch Handler Feature - Handle');
-      await handle(dispatchHandlerToken, dispatchHandlerConfig, dispatchHandlerMax);
-      core.endGroup();
-    } else if (dispatchHandlerWorkflow && dispatchHandlerRef && dispatchHandlerClientPayloadData) {
-      core.startGroup('Dispatch Handler Feature - Dispatch Workflow');
-      const data: ClientPayloadData = JSON.parse(dispatchHandlerClientPayloadData);
-      await handleWorkflowDispatch(
-        dispatchHandlerToken,
-        dispatchHandlerOwner,
-        dispatchHandlerRepo,
-        data,
-        dispatchHandlerWorkflow,
-        dispatchHandlerRef
-      );
-      core.endGroup();
-    } else if (dispatchHandlerClientPayloadData) {
-      core.startGroup('Dispatch Handler Feature - Dispatch Repository');
-      const data: ClientPayloadData = JSON.parse(dispatchHandlerClientPayloadData);
-      await handleRepositoryDispatch(
-        dispatchHandlerToken,
-        dispatchHandlerOwner,
-        dispatchHandlerRepo,
-        dispatchHandlerEventType,
-        data
-      );
-      core.endGroup();
+    if (dispatchHandlerToken) {
+      if (dispatchHandlerConfig) {
+        core.startGroup('Dispatch Handler Feature - Handle');
+        await handle(dispatchHandlerToken, dispatchHandlerConfig, dispatchHandlerMax);
+        core.endGroup();
+      } else if (dispatchHandlerEventType) {
+        core.startGroup('Dispatch Handler Feature - Dispatch Repository');
+        const clientPayloadData: ClientPayloadData = JSON.parse(dispatchHandlerClientPayloadData);
+        await handleRepositoryDispatch(
+          dispatchHandlerToken,
+          dispatchHandlerOwner,
+          dispatchHandlerRepo,
+          dispatchHandlerEventType,
+          clientPayloadData
+        );
+        core.endGroup();
+      } else {
+        core.startGroup('Dispatch Handler Feature - Dispatch Workflow');
+        const clientPayloadData: ClientPayloadData = JSON.parse(dispatchHandlerClientPayloadData);
+        await handleWorkflowDispatch(
+          dispatchHandlerToken,
+          dispatchHandlerOwner,
+          dispatchHandlerRepo,
+          clientPayloadData,
+          dispatchHandlerWorkflow,
+          dispatchHandlerRef
+        );
+        core.endGroup();
+      }
     }
+
+    // if (dispatchHandlerConfig) {
+    //   core.startGroup('Dispatch Handler Feature - Handle');
+    //   await handle(dispatchHandlerToken, dispatchHandlerConfig, dispatchHandlerMax);
+    //   core.endGroup();
+    // } else if (dispatchHandlerWorkflow && dispatchHandlerRef && dispatchHandlerClientPayloadData) {
+    //   core.startGroup('Dispatch Handler Feature - Dispatch Workflow');
+    //   const data: ClientPayloadData = JSON.parse(dispatchHandlerClientPayloadData);
+    //   await handleWorkflowDispatch(
+    //     dispatchHandlerToken,
+    //     dispatchHandlerOwner,
+    //     dispatchHandlerRepo,
+    //     data,
+    //     dispatchHandlerWorkflow,
+    //     dispatchHandlerRef
+    //   );
+    //   core.endGroup();
+    // } else if (dispatchHandlerClientPayloadData) {
+    //   core.startGroup('Dispatch Handler Feature - Dispatch Repository');
+    //   const data: ClientPayloadData = JSON.parse(dispatchHandlerClientPayloadData);
+    //   await handleRepositoryDispatch(
+    //     dispatchHandlerToken,
+    //     dispatchHandlerOwner,
+    //     dispatchHandlerRepo,
+    //     dispatchHandlerEventType,
+    //     data
+    //   );
+    //   core.endGroup();
+    // }
   } catch (error) {
     core.debug(inspect(error));
     core.setFailed(error.message);
