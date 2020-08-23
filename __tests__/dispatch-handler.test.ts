@@ -140,4 +140,36 @@ describe('workflow dispatch handler tests', () => {
     ]);
     await dispatchHandler.handle('token', config, 10);
   }, 100000);
+
+  it('Extract context properties with repository dispatch', async () => {
+    github.context.eventName = 'repository_dispatch';
+    github.context.payload.client_payload = {};
+    github.context.payload.client_payload.build_zoo_handler_context = {};
+    github.context.payload.client_payload.build_zoo_handler_context.properties = {
+      prop1: 'value1',
+      prop2: 'value2'
+    };
+    await dispatchHandler.extractContextProperties();
+    expect(process.env['BUILD_ZOO_HANDLER_prop1']).toBe('value1');
+    expect(process.env['BUILD_ZOO_HANDLER_prop2']).toBe('value2');
+  }, 100000);
+
+  it('Extract context properties with workflow dispatch', async () => {
+    const clientPayload: dispatchHandler.ClientPayload = {
+      build_zoo_handler_context: {
+        handler_count: 0,
+        properties: {
+          prop3: 'value3',
+          prop4: 'value4'
+        }
+      },
+      build_zoo_handler_data: {}
+    };
+    inputs['build-zoo-handler'] = Buffer.from(JSON.stringify(clientPayload)).toString('base64');
+    github.context.payload.inputs = inputs;
+    github.context.eventName = 'workflow_dispatch';
+    await dispatchHandler.extractContextProperties();
+    expect(process.env['BUILD_ZOO_HANDLER_prop3']).toBe('value3');
+    expect(process.env['BUILD_ZOO_HANDLER_prop4']).toBe('value4');
+  }, 100000);
 });
