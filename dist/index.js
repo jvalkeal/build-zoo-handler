@@ -3603,7 +3603,7 @@ function handle(token, config, max) {
             }
             else if (matchConfig.action === HandlerConfigAction.workflow_dispatch && matchConfig.workflow_dispatch) {
                 yield sendWorkflowDispatch(token, matchConfig.workflow_dispatch.owner, matchConfig.workflow_dispatch.repo, matchConfig.workflow_dispatch.workflow, matchConfig.workflow_dispatch.ref, {
-                    'build-zoo-handler': new Buffer(JSON.stringify(p)).toString('base64')
+                    'build-zoo-handler': Buffer.from(JSON.stringify(p)).toString('base64')
                 });
             }
             else if (matchConfig.action === HandlerConfigAction.fail) {
@@ -3654,6 +3654,11 @@ function handleRepositoryDispatch(token, owner, repo, eventType, clientPayloadDa
         core.info(`Current zoo context:\n ${util_1.inspect(context, true, 10)}`);
         core.info('Prepare to send repository dispatch');
         core.debug(`github context: ${util_1.inspect(github.context, true, 10)}`);
+        owner = owner || context.controller_owner;
+        repo = repo || context.controller_repo;
+        if (!owner || !repo) {
+            throw new Error(`All these must be set, owner=${owner} and repo=${repo}`);
+        }
         const p = {
             build_zoo_handler_context: {
                 handler_count: context.handler_count + 1,
@@ -3711,7 +3716,7 @@ function handleWorkflowDispatch(token, owner, repo, clientPayloadData, workflow,
             build_zoo_handler_context: context,
             build_zoo_handler_data: clientPayloadData
         };
-        inputs['build-zoo-handler'] = new Buffer(JSON.stringify(clientPayload)).toString('base64');
+        inputs['build-zoo-handler'] = Buffer.from(JSON.stringify(clientPayload)).toString('base64');
         yield sendWorkflowDispatch(token, owner, repo, workflow, ref, inputs);
         core.info('Workflow dispatch sent successfully');
     });
@@ -3772,7 +3777,7 @@ function getCurrentClientPayload() {
     if (github.context.eventName === 'workflow_dispatch' && github.context.payload.inputs) {
         const zooInput = github.context.payload.inputs['build-zoo-handler'];
         if (zooInput) {
-            const payloadJson = new Buffer(zooInput, 'base64').toString('ascii');
+            const payloadJson = Buffer.from(zooInput, 'base64').toString('ascii');
             const clientPayload = JSON.parse(payloadJson);
             return clientPayload;
         }
@@ -3785,9 +3790,7 @@ function getCurrentClientPayload() {
             handler_count: 0,
             controller_owner: github.context.repo.owner,
             controller_repo: github.context.repo.repo,
-            // controller_workflow: github.context.workflow,
             controller_workflow: splitGetLast(github.context.payload.workflow),
-            // controller_ref: github.context.ref,
             controller_ref: splitGetLast(github.context.ref),
             properties: {}
         },
@@ -3795,8 +3798,15 @@ function getCurrentClientPayload() {
     };
 }
 function splitGetLast(str) {
-    const rest = str.substring(0, str.lastIndexOf("/") + 1);
-    return str.substring(str.lastIndexOf("/") + 1, str.length);
+    if (str) {
+        const index = str.lastIndexOf('/');
+        if (index < 0) {
+            return str;
+        }
+        const rest = str.substring(0, index + 1);
+        return str.substring(str.lastIndexOf("/") + 1, str.length);
+    }
+    return str;
 }
 var HandlerConfigAction;
 (function (HandlerConfigAction) {

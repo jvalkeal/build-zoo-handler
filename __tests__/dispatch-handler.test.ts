@@ -36,7 +36,7 @@ describe('workflow dispatch handler tests', () => {
     jest.restoreAllMocks();
   }, 100000);
 
-  it('Repository Dispatch posts request', async () => {
+  it('Repository Dispatch posts request from params', async () => {
     process.env['GITHUB_REPOSITORY'] = 'owner/repo';
     nock('https://api.github.com')
       .persist()
@@ -51,7 +51,24 @@ describe('workflow dispatch handler tests', () => {
     await dispatchHandler.handleRepositoryDispatch('token', 'owner', 'repo', 'eventType', {});
   }, 100000);
 
-  it('Workflow Dispatch posts request', async () => {
+  it('Repository Dispatch posts request from env', async () => {
+    process.env['GITHUB_REPOSITORY'] = 'owner/repo';
+    nock('https://api.github.com')
+      .persist()
+      .post('/repos/owner/repo/dispatches', body => {
+        return (
+          body.event_type === 'eventType' &&
+          body.client_payload.build_zoo_handler_context.handler_count === 1 &&
+          body.client_payload.build_zoo_handler_context.controller_owner === 'owner' &&
+          body.client_payload.build_zoo_handler_context.controller_repo === 'repo' &&
+          body.client_payload.build_zoo_handler_data.properties
+        );
+      })
+      .reply(204);
+    await dispatchHandler.handleRepositoryDispatch('token', undefined, undefined, 'eventType', {});
+  }, 100000);
+
+  it('Workflow Dispatch posts request from params', async () => {
     process.env['GITHUB_REPOSITORY'] = 'owner/repo';
     nock('https://api.github.com')
       .persist()
@@ -62,16 +79,16 @@ describe('workflow dispatch handler tests', () => {
     await dispatchHandler.handleWorkflowDispatch('token', 'owner', 'repo', {}, 'workflow', 'ref');
   }, 100000);
 
-  it('Workflow Dispatch posts request2', async () => {
+  it('Workflow Dispatch posts request from env', async () => {
     github.context.ref = 'ref';
-    github.context.workflow = 'workflow';
+    github.context.payload.workflow = 'workflow';
     github.context.eventName = 'workflow_dispatch';
     process.env['GITHUB_REPOSITORY'] = 'owner/repo';
     nock('https://api.github.com')
       .persist()
       .post('/repos/owner/repo/actions/workflows/workflow/dispatches', body => {
         const zooInput: string = body.inputs['build-zoo-handler'];
-        const payloadJson = new Buffer(zooInput, 'base64').toString('ascii');
+        const payloadJson = Buffer.from(zooInput, 'base64').toString('ascii');
         const clientPayload = JSON.parse(payloadJson);
         return lodash.isMatch(clientPayload, {
           build_zoo_handler_context: {
@@ -90,14 +107,14 @@ describe('workflow dispatch handler tests', () => {
 
   it('Handle sets context', async () => {
     github.context.ref = 'ref';
-    github.context.workflow = 'workflow';
+    github.context.payload.workflow = 'workflow';
     github.context.eventName = 'workflow_dispatch';
     process.env['GITHUB_REPOSITORY'] = 'owner/repo';
     nock('https://api.github.com')
       .persist()
       .post('/repos/owner/repo/actions/workflows/workflow/dispatches', body => {
           const zooInput: string = body.inputs['build-zoo-handler'];
-          const payloadJson = new Buffer(zooInput, 'base64').toString('ascii');
+          const payloadJson = Buffer.from(zooInput, 'base64').toString('ascii');
           const clientPayload = JSON.parse(payloadJson);
           return lodash.isMatch(clientPayload, {
             build_zoo_handler_context: {
