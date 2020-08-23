@@ -97,8 +97,8 @@ async function evaluate(expression: string, context: ExpressionContext): Promise
 
 export async function handleRepositoryDispatch(
   token: string,
-  owner: string|undefined,
-  repo: string|undefined,
+  owner: string | undefined,
+  repo: string | undefined,
   eventType: string,
   clientPayloadData: ClientPayloadData
 ) {
@@ -163,11 +163,11 @@ export async function sendRepositoryDispatch(
 
 export async function handleWorkflowDispatch(
   token: string,
-  owner: string|undefined,
-  repo: string|undefined,
+  owner: string | undefined,
+  repo: string | undefined,
   clientPayloadData: ClientPayloadData,
-  workflow: string|undefined,
-  ref: string|undefined
+  workflow: string | undefined,
+  ref: string | undefined
 ) {
   if (clientPayloadData.owner === undefined && github.context.payload.repository) {
     clientPayloadData.owner = github.context.payload.repository.owner.login;
@@ -288,14 +288,14 @@ function getCurrentClientPayload(): ClientPayload {
   };
 }
 
-function splitGetLast(str: string|undefined): string|undefined {
+function splitGetLast(str: string | undefined): string | undefined {
   if (str) {
     const index = str.lastIndexOf('/');
     if (index < 0) {
       return str;
     }
     const rest = str.substring(0, index + 1);
-    return str.substring(str.lastIndexOf("/") + 1, str.length);
+    return str.substring(str.lastIndexOf('/') + 1, str.length);
   }
   return str;
 }

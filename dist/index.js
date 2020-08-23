@@ -3804,7 +3804,7 @@ function splitGetLast(str) {
             return str;
         }
         const rest = str.substring(0, index + 1);
-        return str.substring(str.lastIndexOf("/") + 1, str.length);
+        return str.substring(str.lastIndexOf('/') + 1, str.length);
     }
     return str;
 }

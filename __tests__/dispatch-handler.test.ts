@@ -1,7 +1,7 @@
 import nock from 'nock';
 import lodash from 'lodash';
-import * as core from '@actions/core'
-import * as github from '@actions/github'
+import * as core from '@actions/core';
+import * as github from '@actions/github';
 import * as dispatchHandler from '../src/dispatch-handler';
 
 const originalGitHubWorkspace = process.env['GITHUB_WORKSPACE'];
@@ -12,13 +12,13 @@ let inputs = {} as any;
 describe('workflow dispatch handler tests', () => {
   beforeAll(async () => {
     jest.spyOn(core, 'getInput').mockImplementation((name: string) => {
-      return inputs[name]
-    })
+      return inputs[name];
+    });
   }, 300000);
 
   beforeEach(() => {
     inputs = {};
-  })
+  });
 
   afterAll(async () => {
     delete process.env['GITHUB_WORKSPACE'];
@@ -99,9 +99,8 @@ describe('workflow dispatch handler tests', () => {
             controller_ref: 'ref'
           }
         });
-      }
-    )
-    .reply(204);
+      })
+      .reply(204);
     await dispatchHandler.handleWorkflowDispatch('token', undefined, undefined, {}, undefined, undefined);
   }, 100000);
 
@@ -113,33 +112,32 @@ describe('workflow dispatch handler tests', () => {
     nock('https://api.github.com')
       .persist()
       .post('/repos/owner/repo/actions/workflows/workflow/dispatches', body => {
-          const zooInput: string = body.inputs['build-zoo-handler'];
-          const payloadJson = Buffer.from(zooInput, 'base64').toString('ascii');
-          const clientPayload = JSON.parse(payloadJson);
-          return lodash.isMatch(clientPayload, {
-            build_zoo_handler_context: {
-              handler_count: 1,
-              controller_owner: 'owner',
-              controller_repo: 'repo',
-              controller_workflow: 'workflow',
-              controller_ref: 'ref'
-            }
-          });
-        }
-      )
-      .reply(204);
-      const config = JSON.stringify([
-        {
-          if: 'initial == true',
-          action: 'workflow_dispatch',
-          workflow_dispatch: {
-            owner: 'owner',
-            repo: 'repo',
-            workflow: 'workflow',
-            ref: 'ref'
+        const zooInput: string = body.inputs['build-zoo-handler'];
+        const payloadJson = Buffer.from(zooInput, 'base64').toString('ascii');
+        const clientPayload = JSON.parse(payloadJson);
+        return lodash.isMatch(clientPayload, {
+          build_zoo_handler_context: {
+            handler_count: 1,
+            controller_owner: 'owner',
+            controller_repo: 'repo',
+            controller_workflow: 'workflow',
+            controller_ref: 'ref'
           }
+        });
+      })
+      .reply(204);
+    const config = JSON.stringify([
+      {
+        if: 'initial == true',
+        action: 'workflow_dispatch',
+        workflow_dispatch: {
+          owner: 'owner',
+          repo: 'repo',
+          workflow: 'workflow',
+          ref: 'ref'
         }
-      ]);
-      await dispatchHandler.handle('token', config, 10);
+      }
+    ]);
+    await dispatchHandler.handle('token', config, 10);
   }, 100000);
 });
