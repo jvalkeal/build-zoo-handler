@@ -229,7 +229,10 @@ export async function sendWorkflowDispatch(
 export async function extractContextProperties(): Promise<void> {
   let count = 0;
   try {
-    const props = github.context.payload.client_payload.build_zoo_handler_context.properties as {[key: string]: string};
+    const clientPayload = getCurrentClientPayload();
+    console.log('xxx1', clientPayload);
+    const props = clientPayload.build_zoo_handler_context.properties;
+    console.log('xxx2', props);
     for (let key in props) {
       const value = props[key];
       core.exportVariable(`BUILD_ZOO_HANDLER_${key}`, value);
