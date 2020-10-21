@@ -18,6 +18,7 @@ describe('workflow dispatch handler tests', () => {
 
   beforeEach(() => {
     inputs = {};
+    // nock.cleanAll();
   });
 
   afterAll(async () => {
@@ -171,5 +172,49 @@ describe('workflow dispatch handler tests', () => {
     await dispatchHandler.extractContextProperties();
     expect(process.env['BUILD_ZOO_HANDLER_prop3']).toBe('value3');
     expect(process.env['BUILD_ZOO_HANDLER_prop4']).toBe('value4');
+  }, 100000);
+
+  it('Handle sets initial context properties', async () => {
+    inputs['build-zoo-handler-properties'] = 'prop1=value1,prop2=value2';
+    github.context.payload.inputs = inputs;
+
+    github.context.ref = 'ref';
+    github.context.payload.workflow = 'workflow';
+    github.context.eventName = 'workflow_dispatch';
+    process.env['GITHUB_REPOSITORY'] = 'owner/repo';
+    nock('https://api.github.com')
+      .persist()
+      .post('/repos/owner/repo/actions/workflows/workflow/dispatches', body => {
+        const zooInput: string = body.inputs['build-zoo-handler'];
+        const payloadJson = Buffer.from(zooInput, 'base64').toString('ascii');
+        const clientPayload = JSON.parse(payloadJson);
+        return lodash.isMatch(clientPayload, {
+          build_zoo_handler_context: {
+            handler_count: 1,
+            controller_owner: 'owner',
+            controller_repo: 'repo',
+            controller_workflow: 'workflow',
+            controller_ref: 'ref',
+            properties: {
+              prop1: 'value1',
+              prop2: 'value2'
+            }
+          }
+        });
+      })
+      .reply(204);
+    const config = JSON.stringify([
+      {
+        if: 'initial == true',
+        action: 'workflow_dispatch',
+        workflow_dispatch: {
+          owner: 'owner',
+          repo: 'repo',
+          workflow: 'workflow',
+          ref: 'ref'
+        }
+      }
+    ]);
+    await dispatchHandler.handle('token', config, 10);
   }, 100000);
 });

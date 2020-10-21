@@ -7,9 +7,11 @@ export async function handle(token: string, config: string, max: number): Promis
   core.debug(`github context: ${inspect(github.context, true, 10)}`);
 
   const clientPayload = getCurrentClientPayload();
+  const clientProperties = getCurrentClientProperties();
   const context = clientPayload.build_zoo_handler_context;
   const data = clientPayload.build_zoo_handler_data;
   core.info(`Current zoo context:\n ${inspect(context, true, 10)}`);
+  core.info(`Current client properties:\n ${inspect(clientProperties, true, 10)}`);
   core.debug(`data: ${inspect(data)}`);
 
   if (context.handler_count && context.handler_count > max) {
@@ -43,7 +45,7 @@ export async function handle(token: string, config: string, max: number): Promis
       controller_repo: context.controller_repo,
       controller_workflow: context.controller_workflow,
       controller_ref: context.controller_ref,
-      properties: {...context.properties, ...data.properties}
+      properties: {...context.properties, ...data.properties, ...clientProperties}
     },
     build_zoo_handler_data: {}
   };
@@ -287,6 +289,22 @@ function getCurrentClientPayload(): ClientPayload {
     },
     build_zoo_handler_data: {}
   };
+}
+
+function getCurrentClientProperties(): {[key: string]: string} {
+  if (github.context.eventName === 'workflow_dispatch' && github.context.payload.inputs) {
+    const zooInputProperties: string = github.context.payload.inputs['build-zoo-handler-properties'];
+    if (zooInputProperties) {
+      return zooInputProperties.split(',').reduce((obj, str) => {
+        const split = str.split('=');
+        if (split.length === 2) {
+          obj[split[0].trim()] = split[1].trim();
+        }
+        return obj;
+      }, {} as {[key: string]: string});
+    }
+  }
+  return {};
 }
 
 function splitGetLast(str: string | undefined): string | undefined {
