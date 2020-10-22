@@ -386,6 +386,13 @@ name: Repo1 Zoo Controller
 
 on:
   workflow_dispatch:
+    inputs:
+      build-zoo-handler:
+        description: 'Build Zoo Handler Payload'
+        required: false
+      build-zoo-handler-properties:
+        description: 'Build Zoo Handler Initial Properties'
+        required: false
   repository_dispatch:
     types: [build-zoo-handler-control-example]
 
@@ -442,6 +449,14 @@ to presence of _workflow dispatch_ few things happen after that.
 * In case remote workflow fails, fallback step runs and notifies controller
   about its failure and then controller workflow fails as well together
   with a `message` payload field passed in from a remote workflow.
+
+[NOTE]
+====
+On a controller side _workflow dispatch_ can only use optional field
+`build-zoo-handler-properties` with format _prop1=value1,prop2=value2_.
+Properties from this comma delimited key/value list will be added to
+context as properties throughout a whole running train.
+====
 
 ### Two Repos via Workflow Dispatch
 
