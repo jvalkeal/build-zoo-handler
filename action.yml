@@ -75,6 +75,12 @@ inputs:
   dispatch-handler-extract-context-properties:
     description: 'Extract zoo related context properties to environment, defaults to false'
     required: false
+  issue-handler-token:
+    description: 'Github api token for operations'
+    required: false
+  issue-handler-config:
+    description: 'Action spesific issue handler control config'
+    required: false
 runs:
   using: 'node12'
   main: 'dist/index.js'

@@ -1,7 +1,9 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
-import jexl from 'jexl';
 import {inspect} from 'util';
+import jexl from 'jexl';
+// 2.3.0 missing from definitelytyped
+// const jexl = require('jexl')
 
 export async function handle(token: string, config: string, max: number): Promise<void> {
   core.debug(`github context: ${inspect(github.context, true, 10)}`);

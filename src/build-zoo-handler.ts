@@ -13,6 +13,7 @@ import {
   extractContextProperties
 } from './dispatch-handler';
 import {splitStringToArray} from './utils';
+import {handleIssue} from './issue-handler';
 
 const DEFAULT_USERNAME = 'github-actions[bot]';
 const DEFAULT_USEREMAIL = '41898282+github-actions[bot]@users.noreply.github.com';
@@ -120,6 +121,15 @@ async function run() {
         );
         core.endGroup();
       }
+    }
+
+    // issue-handler
+    const issueHandlerToken = inputNotRequired('issue-handler-token');
+    const issueHandlerConfig = inputNotRequired('issue-handler-config');
+    if (issueHandlerConfig && issueHandlerToken) {
+      core.startGroup('Issue Handler Feature');
+      await handleIssue(issueHandlerToken, issueHandlerConfig);
+      core.endGroup();
     }
   } catch (error) {
     core.debug(inspect(error));

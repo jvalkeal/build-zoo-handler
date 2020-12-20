@@ -1,0 +1,18 @@
+# Labeler
+
+[source,yaml]
+----
+
+labeler-config: >
+  {
+    "actions": [
+      {
+        "if": "hasLabels('for/backport','backport/*')",
+        "then": "createIssue()"
+      }
+    ]
+  }
+
+
+
+----
