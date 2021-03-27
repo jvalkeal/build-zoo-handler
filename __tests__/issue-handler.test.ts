@@ -44,6 +44,8 @@ describe('issue handler tests', () => {
     github.context.eventName = 'issues';
     github.context.payload.issue = {
       number: 1,
+      title: 'Original Title',
+      body: 'Original Body',
       labels: [
         {
           name: 'label1'
@@ -58,28 +60,31 @@ describe('issue handler tests', () => {
     nock('https://api.github.com')
       .persist()
       .post('/repos/owner/repo/issues', body => {
-        console.log('xxx', body);
+        // console.log('xxx', body);
         return lodash.isMatch(body, {
-          title: 'title',
-          body: 'body'
+          title: 'Backport: Original Title',
+          body: 'Backport #1'
         });
       })
       .reply(201);
 
+    // Prexis title and add original issue as ref to body
     const config = `
       {
         "actions": [
           {
             "type": "ifThen",
             "if": "hasLabels(['label1'])",
-            "then": "createIssue()"
+            "then": "createIssue('Backport: ' + title,'Backport #' + number)"
           }
         ]
       }
     `;
 
+    // kick testing flow
     await issueHandler.handleIssue('token', config);
 
+    // make sure we had a call
     if (!nock.isDone()) {
       throw new Error('Not all nock interceptors were used!');
     }

@@ -1,11 +1,8 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
+import {Context} from '@actions/github/lib/context';
 import {inspect} from 'util';
 import jexl from 'jexl';
-// 2.3.0 missing from definitelytyped
-// const jexl = require('jexl')
-// import jexl from './typings/jexl';
-// import jexl from 'typings/jexl';
 
 /**
  * Main handle function which takes a json config, processes it
@@ -13,18 +10,24 @@ import jexl from 'jexl';
  */
 export async function handleIssue(token: string, config: string): Promise<void> {
   core.debug(`github context: ${inspect(github.context, true, 10)}`);
-  addJexlFunctions(token);
   const configs = getHandlerConfigFromJson(config);
 
   // const j = new jexl.Jexl();
+  const expressionContext: ExpressionContext = {
+    context: github.context,
+    title: github.context.payload.issue?.title,
+    body: github.context.payload.issue?.body || '',
+    number: github.context.issue.number
+  };
+  addJexlFunctions(token);
 
   for (const action of configs.actions) {
     switch (action.type) {
       case ActionType.ifThen:
-        await handleIfThen(action);
+        await handleIfThen(action, expressionContext);
         break;
       case ActionType.ifIfelseThen:
-        await handleIfIfelseThen(action);
+        await handleIfIfelseThen(action, expressionContext);
         break;
       default:
         break;
@@ -35,19 +38,19 @@ export async function handleIssue(token: string, config: string): Promise<void> 
 /**
  * Handling logic of 'ifThen'.
  */
-export async function handleIfThen(action: IfThen): Promise<void> {
+export async function handleIfThen(action: IfThen, expressionContext: ExpressionContext): Promise<void> {
   core.debug(`handleIfThen ${inspect(action)}`);
-  const ret = await jexl.eval(action.if, {});
+  const ret = await jexl.eval(action.if, expressionContext);
   const evaluate = ret === true;
   if (evaluate) {
-    await jexl.eval(action.then, {});
+    await jexl.eval(action.then, expressionContext);
   }
 }
 
 /**
  * Handling logic of 'ifIfelseThen'.
  */
-export async function handleIfIfelseThen(action: IfElseThen): Promise<void> {
+export async function handleIfIfelseThen(action: IfElseThen, expressionContext: ExpressionContext): Promise<void> {
   core.debug(`handleIfIfelseThen ${inspect(action)}`);
   await jexl.eval(action.if, {});
   await jexl.eval(action.elseif, {});
@@ -58,13 +61,13 @@ export async function handleIfIfelseThen(action: IfElseThen): Promise<void> {
  *
  */
 function addJexlFunctions(token: string): void {
-  jexl.addFunction('createIssue', async () => {
-    core.debug(`hi from createIssue()`);
-    await createIssue(token, github.context.repo.owner, github.context.repo.repo, 'title', 'body');
+  jexl.addFunction('createIssue', async (title: string, body: string) => {
+    // core.debug(`hi from createIssue()`);
+    await createIssue(token, github.context.repo.owner, github.context.repo.repo, title, body);
   });
 
   jexl.addFunction('hasLabels', (labels: string[]) => {
-    core.debug(`hi from hasLabels() ${inspect(labels)}`);
+    // core.debug(`hi from hasLabels() ${inspect(labels)}`);
     const payloadLabelObjects = github.context.payload.issue?.labels as {name: string}[];
     if (payloadLabelObjects) {
       const existingLabels = payloadLabelObjects.map(l => l.name);
@@ -122,6 +125,9 @@ interface IfElseThen {
 
 type Action = ({type: ActionType.ifThen} & IfThen) | ({type: ActionType.ifIfelseThen} & IfElseThen);
 
-// type ExtractActionParameters<A, T> = A extends {type: T} ? A : never;
-// type Test1 = ExtractActionParameters<Action, "ifThen">;
-// type Test2 = ExtractActionParameters<Action, ActionType.ifThen>;
+interface ExpressionContext {
+  context: Context;
+  title: string;
+  body: string;
+  number: number;
+}
